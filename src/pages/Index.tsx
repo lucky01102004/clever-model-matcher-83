@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 const Index = () => {
   const [step, setStep] = useState(1);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const steps = [
     {
@@ -34,10 +35,23 @@ const Index = () => {
   ];
 
   const handleBeginAnalysis = () => {
+    if (step === 1 && !selectedFile) {
+      toast.error("Please upload a dataset before proceeding");
+      return;
+    }
+
     if (step < steps.length) {
       setStep(step + 1);
+      toast.success(`Moving to ${steps[step].title}`);
     } else {
       toast.error("You are already at the final step");
+    }
+  };
+
+  const handleFileSelect = (file: File | null) => {
+    setSelectedFile(file);
+    if (file) {
+      toast.success("File uploaded successfully");
     }
   };
 
@@ -110,7 +124,7 @@ const Index = () => {
               </p>
             </div>
 
-            <FileUpload />
+            <FileUpload onFileSelect={handleFileSelect} />
 
             <div className="mt-8 text-center">
               <Button

@@ -3,7 +3,11 @@ import { useState } from "react";
 import { Upload, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export const FileUpload = () => {
+interface FileUploadProps {
+  onFileSelect: (file: File | null) => void;
+}
+
+export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
 
@@ -24,6 +28,7 @@ export const FileUpload = () => {
     const droppedFile = e.dataTransfer.files[0];
     if (isValidFile(droppedFile)) {
       setFile(droppedFile);
+      onFileSelect(droppedFile);
     }
   };
 
@@ -31,6 +36,7 @@ export const FileUpload = () => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile && isValidFile(selectedFile)) {
       setFile(selectedFile);
+      onFileSelect(selectedFile);
     }
   };
 
@@ -41,6 +47,7 @@ export const FileUpload = () => {
 
   const removeFile = () => {
     setFile(null);
+    onFileSelect(null);
   };
 
   return (
