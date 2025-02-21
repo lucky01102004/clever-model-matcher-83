@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChevronRight, Upload, Code, Database, Settings } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 const Index = () => {
   const [step, setStep] = useState(1);
@@ -31,6 +32,14 @@ const Index = () => {
       icon: Code,
     },
   ];
+
+  const handleBeginAnalysis = () => {
+    if (step < steps.length) {
+      setStep(step + 1);
+    } else {
+      toast.error("You are already at the final step");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-secondary to-background">
@@ -107,6 +116,7 @@ const Index = () => {
               <Button
                 size="lg"
                 className="bg-accent hover:bg-accent/90 text-white"
+                onClick={handleBeginAnalysis}
               >
                 Begin Analysis
                 <ChevronRight className="ml-2 h-4 w-4" />
