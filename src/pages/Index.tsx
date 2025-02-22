@@ -138,22 +138,71 @@ const Index = () => {
                   name: "Random Forest",
                   accuracy: "92%",
                   description:
-                    "Best for handling both numerical and categorical data",
+                    "Best for handling both numerical and categorical data. Excellent for avoiding overfitting.",
+                  useCases: "Classification, Regression",
                 },
                 {
                   name: "XGBoost",
                   accuracy: "89%",
-                  description: "Excellent for complex non-linear relationships",
+                  description:
+                    "Powerful gradient boosting algorithm. Handles missing values well.",
+                  useCases: "Classification, Regression, Ranking",
                 },
                 {
                   name: "Neural Network",
                   accuracy: "87%",
-                  description: "Good for large datasets with deep patterns",
+                  description:
+                    "Deep learning model for complex patterns. Good with large datasets.",
+                  useCases: "Classification, Regression, Pattern Recognition",
+                },
+                {
+                  name: "LightGBM",
+                  accuracy: "88%",
+                  description:
+                    "Fast gradient boosting framework. Efficient with large datasets.",
+                  useCases: "Classification, Regression",
+                },
+                {
+                  name: "CatBoost",
+                  accuracy: "90%",
+                  description:
+                    "Handles categorical features automatically. Fast training.",
+                  useCases: "Classification, Regression",
                 },
                 {
                   name: "SVM",
                   accuracy: "85%",
-                  description: "Effective for high-dimensional data",
+                  description:
+                    "Effective for high-dimensional spaces. Good with clear margins.",
+                  useCases: "Classification, Regression",
+                },
+                {
+                  name: "K-Nearest Neighbors",
+                  accuracy: "83%",
+                  description:
+                    "Simple and interpretable. Good for small to medium datasets.",
+                  useCases: "Classification, Regression",
+                },
+                {
+                  name: "Logistic Regression",
+                  accuracy: "82%",
+                  description:
+                    "Simple and interpretable. Good baseline model.",
+                  useCases: "Binary Classification",
+                },
+                {
+                  name: "Decision Tree",
+                  accuracy: "81%",
+                  description:
+                    "Highly interpretable. Good for feature importance.",
+                  useCases: "Classification, Regression",
+                },
+                {
+                  name: "AdaBoost",
+                  accuracy: "86%",
+                  description:
+                    "Combines weak learners into strong ones. Good with weak patterns.",
+                  useCases: "Classification, Regression",
                 },
               ].map((algo, i) => (
                 <Card key={i}>
@@ -164,8 +213,12 @@ const Index = () => {
                         {algo.accuracy}
                       </span>
                     </div>
-                    <p className="text-sm text-primary-600">
+                    <p className="text-sm text-primary-600 mb-2">
                       {algo.description}
+                    </p>
+                    <p className="text-xs text-primary-500">
+                      <span className="font-semibold">Use Cases:</span>{" "}
+                      {algo.useCases}
                     </p>
                   </CardContent>
                 </Card>
