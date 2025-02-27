@@ -346,67 +346,62 @@ const Index = () => {
           );
         }
 
-        const dataTypes = calculateDataTypes(datasetStats.dataSample);
-        const missingValuesPercentage = Number(calculateMissingValues(datasetStats.dataSample));
-        const algorithms = getRecommendedAlgorithms(
-          dataTypes,
-          datasetStats.rows,
-          missingValuesPercentage
-        );
+        {
+          const analysisDataTypes = calculateDataTypes(datasetStats.dataSample);
+          const analysisMissingValues = Number(calculateMissingValues(datasetStats.dataSample));
 
-        const topAlgorithms = algorithms.slice(0, 5);
-        const otherAlgorithms = algorithms.slice(5);
-
-        return (
-          <div>
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-semibold text-primary-900 mb-2">
-                Data Analysis
-              </h2>
-              <p className="text-primary-600">
-                Analyzing your dataset to understand its characteristics
-              </p>
-            </div>
-            <div className="space-y-4">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-medium">Dataset Overview</h3>
-                      <p className="text-sm text-primary-600">
-                        {selectedFile?.name}
-                      </p>
+          return (
+            <div>
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-semibold text-primary-900 mb-2">
+                  Data Analysis
+                </h2>
+                <p className="text-primary-600">
+                  Analyzing your dataset to understand its characteristics
+                </p>
+              </div>
+              <div className="space-y-4">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-medium">Dataset Overview</h3>
+                        <p className="text-sm text-primary-600">
+                          {selectedFile?.name}
+                        </p>
+                      </div>
+                      <Database className="h-8 w-8 text-accent" />
                     </div>
-                    <Database className="h-8 w-8 text-accent" />
-                  </div>
-                </CardContent>
-              </Card>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-medium mb-2">Basic Statistics</h3>
-                    <ul className="space-y-2 text-sm text-primary-600">
-                      <li>Rows: {datasetStats.rows.toLocaleString()}</li>
-                      <li>Columns: {datasetStats.columns.toLocaleString()}</li>
-                      <li>Missing Values: {missingValuesPercentage}%</li>
-                    </ul>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-medium mb-2">Data Types</h3>
-                    <ul className="space-y-2 text-sm text-primary-600">
-                      <li>Numerical: {dataTypes.numerical} columns</li>
-                      <li>Categorical: {dataTypes.categorical} columns</li>
-                      <li>Datetime: {dataTypes.datetime} columns</li>
-                      <li>Boolean: {dataTypes.boolean} columns</li>
-                    </ul>
-                  </CardContent>
-                </Card>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-medium mb-2">Basic Statistics</h3>
+                      <ul className="space-y-2 text-sm text-primary-600">
+                        <li>Rows: {datasetStats.rows.toLocaleString()}</li>
+                        <li>Columns: {datasetStats.columns.toLocaleString()}</li>
+                        <li>Missing Values: {analysisMissingValues}%</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-medium mb-2">Data Types</h3>
+                      <ul className="space-y-2 text-sm text-primary-600">
+                        <li>Numerical: {analysisDataTypes.numerical} columns</li>
+                        <li>Categorical: {analysisDataTypes.categorical} columns</li>
+                        <li>Datetime: {analysisDataTypes.datetime} columns</li>
+                        <li>Boolean: {analysisDataTypes.boolean} columns</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </div>
-          </div>
-        );
+          );
+        }
+
       case 3:
         if (!datasetStats) {
           return (
@@ -418,85 +413,88 @@ const Index = () => {
           );
         }
 
-        const dataTypes = calculateDataTypes(datasetStats.dataSample);
-        const missingValuesPercentage = Number(calculateMissingValues(datasetStats.dataSample));
-        const algorithms = getRecommendedAlgorithms(
-          dataTypes,
-          datasetStats.rows,
-          missingValuesPercentage
-        );
+        {
+          const algorithmDataTypes = calculateDataTypes(datasetStats.dataSample);
+          const algorithmMissingValues = Number(calculateMissingValues(datasetStats.dataSample));
+          const recommendedAlgorithms = getRecommendedAlgorithms(
+            algorithmDataTypes,
+            datasetStats.rows,
+            algorithmMissingValues
+          );
 
-        const topAlgorithms = algorithms.slice(0, 5);
-        const otherAlgorithms = algorithms.slice(5);
+          const bestAlgorithms = recommendedAlgorithms.slice(0, 5);
+          const alternativeAlgorithms = recommendedAlgorithms.slice(5);
 
-        return (
-          <div>
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-semibold text-primary-900 mb-2">
-                Recommended Algorithms
-              </h2>
-              <p className="text-primary-600">
-                Based on your dataset characteristics
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-semibold text-primary-900 mb-4">
-                  Top Recommendations
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {topAlgorithms.map((algo, i) => (
-                    <Card key={i} className="border-2 border-accent">
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-lg font-medium">{algo.name}</h3>
-                          <span className="text-accent font-semibold">
-                            {algo.score}% Match
-                          </span>
-                        </div>
-                        <p className="text-sm text-primary-600 mb-2">
-                          {algo.description}
-                        </p>
-                        <p className="text-xs text-primary-500">
-                          <span className="font-semibold">Use Cases:</span>{" "}
-                          {algo.useCases}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+          return (
+            <div>
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-semibold text-primary-900 mb-2">
+                  Recommended Algorithms
+                </h2>
+                <p className="text-primary-600">
+                  Based on your dataset characteristics
+                </p>
               </div>
 
-              <div>
-                <h3 className="text-xl font-semibold text-primary-900 mb-4">
-                  Other Available Algorithms
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {otherAlgorithms.map((algo, i) => (
-                    <Card key={i}>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-lg font-medium">{algo.name}</h3>
-                          <span className="text-primary-600 font-semibold">
-                            {algo.score}% Match
-                          </span>
-                        </div>
-                        <p className="text-sm text-primary-600 mb-2">
-                          {algo.description}
-                        </p>
-                        <p className="text-xs text-primary-500">
-                          <span className="font-semibold">Use Cases:</span>{" "}
-                          {algo.useCases}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-semibold text-primary-900 mb-4">
+                    Top Recommendations
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {bestAlgorithms.map((algo, i) => (
+                      <Card key={i} className="border-2 border-accent">
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-medium">{algo.name}</h3>
+                            <span className="text-accent font-semibold">
+                              {algo.score}% Match
+                            </span>
+                          </div>
+                          <p className="text-sm text-primary-600 mb-2">
+                            {algo.description}
+                          </p>
+                          <p className="text-xs text-primary-500">
+                            <span className="font-semibold">Use Cases:</span>{" "}
+                            {algo.useCases}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-semibold text-primary-900 mb-4">
+                    Other Available Algorithms
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {alternativeAlgorithms.map((algo, i) => (
+                      <Card key={i}>
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-medium">{algo.name}</h3>
+                            <span className="text-primary-600 font-semibold">
+                              {algo.score}% Match
+                            </span>
+                          </div>
+                          <p className="text-sm text-primary-600 mb-2">
+                            {algo.description}
+                          </p>
+                          <p className="text-xs text-primary-500">
+                            <span className="font-semibold">Use Cases:</span>{" "}
+                            {algo.useCases}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        );
+          );
+        }
+
       case 4:
         return (
           <div>
