@@ -9,6 +9,7 @@ import { toast } from "sonner";
 const Index = () => {
   const [step, setStep] = useState(1);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedAlgorithm, setSelectedAlgorithm] = useState<string | null>(null);
   const [datasetStats, setDatasetStats] = useState<{
     rows: number;
     columns: number;
@@ -69,6 +70,11 @@ const Index = () => {
     } else {
       setDatasetStats(null);
     }
+  };
+
+  const handleAlgorithmSelect = (algorithmName: string) => {
+    setSelectedAlgorithm(algorithmName);
+    toast.success(`Selected ${algorithmName} algorithm`);
   };
 
   const calculateDataTypes = (data: Record<string, string>[]) => {
@@ -429,21 +435,29 @@ const Index = () => {
             <div>
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-semibold text-primary-900 mb-2">
-                  Recommended Algorithms
+                  Algorithm Selection
                 </h2>
                 <p className="text-primary-600">
-                  Based on your dataset characteristics
+                  Choose any algorithm that best suits your needs. Match percentages are recommendations based on your data.
                 </p>
               </div>
 
               <div className="space-y-6">
                 <div>
                   <h3 className="text-xl font-semibold text-primary-900 mb-4">
-                    Top Recommendations
+                    Recommended Algorithms
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {bestAlgorithms.map((algo, i) => (
-                      <Card key={i} className="border-2 border-accent">
+                      <Card 
+                        key={i} 
+                        className={`border-2 cursor-pointer transition-all duration-200 ${
+                          selectedAlgorithm === algo.name
+                            ? "border-accent bg-accent/5"
+                            : "border-primary-200 hover:border-accent/50"
+                        }`}
+                        onClick={() => handleAlgorithmSelect(algo.name)}
+                      >
                         <CardContent className="p-6">
                           <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-medium">{algo.name}</h3>
@@ -466,11 +480,19 @@ const Index = () => {
 
                 <div>
                   <h3 className="text-xl font-semibold text-primary-900 mb-4">
-                    Other Available Algorithms
+                    Other Algorithms
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {alternativeAlgorithms.map((algo, i) => (
-                      <Card key={i}>
+                      <Card 
+                        key={i}
+                        className={`cursor-pointer transition-all duration-200 ${
+                          selectedAlgorithm === algo.name
+                            ? "border-2 border-accent bg-accent/5"
+                            : "hover:border-accent/50"
+                        }`}
+                        onClick={() => handleAlgorithmSelect(algo.name)}
+                      >
                         <CardContent className="p-6">
                           <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-medium">{algo.name}</h3>
