@@ -2,9 +2,10 @@
 import { useState } from "react";
 import { Upload, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Papa from "papaparse";
 
 interface FileUploadProps {
-  onFileSelect: (file: File | null) => void;
+  onFileSelect: (file: File | null, stats?: { rows: number; columns: number }) => void;
 }
 
 export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
@@ -21,6 +22,27 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
     setIsDragging(false);
   };
 
+  const analyzeFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        Papa.parse(event.target.result as string, {
+          complete: (results) => {
+            const stats = {
+              rows: results.data.length - 1, // Subtract 1 to account for header row
+              columns: results.data[0]?.length || 0
+            };
+            onFileSelect(file, stats);
+          },
+          error: (error) => {
+            console.error("Error parsing CSV:", error);
+          }
+        });
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -28,7 +50,7 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
     const droppedFile = e.dataTransfer.files[0];
     if (isValidFile(droppedFile)) {
       setFile(droppedFile);
-      onFileSelect(droppedFile);
+      analyzeFile(droppedFile);
     }
   };
 
@@ -36,7 +58,7 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile && isValidFile(selectedFile)) {
       setFile(selectedFile);
-      onFileSelect(selectedFile);
+      analyzeFile(selectedFile);
     }
   };
 
@@ -81,7 +103,7 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
               Drag and drop your file here
             </p>
             <p className="text-sm text-primary-600">
-              or click to browse (CSV, Excel files only)
+              or click to browse (CSV files only)
             </p>
           </div>
         </div>

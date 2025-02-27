@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { FileUpload } from "@/components/FileUpload";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { toast } from "sonner";
 const Index = () => {
   const [step, setStep] = useState(1);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [datasetStats, setDatasetStats] = useState<{ rows: number; columns: number } | null>(null);
 
   const steps = [
     {
@@ -48,10 +48,13 @@ const Index = () => {
     }
   };
 
-  const handleFileSelect = (file: File | null) => {
+  const handleFileSelect = (file: File | null, stats?: { rows: number; columns: number }) => {
     setSelectedFile(file);
-    if (file) {
-      toast.success("File uploaded successfully");
+    if (file && stats) {
+      setDatasetStats(stats);
+      toast.success("File analyzed successfully");
+    } else {
+      setDatasetStats(null);
     }
   };
 
@@ -69,6 +72,31 @@ const Index = () => {
               </p>
             </div>
             <FileUpload onFileSelect={handleFileSelect} />
+            {datasetStats && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-6 p-6 bg-primary-50 rounded-lg"
+              >
+                <h3 className="text-lg font-semibold text-primary-900 mb-4">
+                  Dataset Analysis
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <p className="text-sm text-primary-600">Total Rows</p>
+                    <p className="text-2xl font-semibold text-primary-900">
+                      {datasetStats.rows.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <p className="text-sm text-primary-600">Total Columns</p>
+                    <p className="text-2xl font-semibold text-primary-900">
+                      {datasetStats.columns.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
           </div>
         );
       case 2:
