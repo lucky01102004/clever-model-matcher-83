@@ -128,6 +128,120 @@ const Index = () => {
     return ((missingCells / totalCells) * 100).toFixed(1);
   };
 
+  const getRecommendedAlgorithms = (
+    dataTypes: {
+      numerical: number;
+      categorical: number;
+      datetime: number;
+      boolean: number;
+    },
+    totalRows: number,
+    missingValuesPercentage: number
+  ) => {
+    const algorithms = [
+      {
+        name: "Random Forest",
+        score: 0,
+        description: "Best for handling both numerical and categorical data. Excellent for avoiding overfitting.",
+        useCases: "Classification, Regression",
+      },
+      {
+        name: "XGBoost",
+        score: 0,
+        description: "Powerful gradient boosting algorithm. Handles missing values well.",
+        useCases: "Classification, Regression, Ranking",
+      },
+      {
+        name: "Neural Network",
+        score: 0,
+        description: "Deep learning model for complex patterns. Good with large datasets.",
+        useCases: "Classification, Regression, Pattern Recognition",
+      },
+      {
+        name: "LightGBM",
+        score: 0,
+        description: "Fast gradient boosting framework. Efficient with large datasets.",
+        useCases: "Classification, Regression",
+      },
+      {
+        name: "CatBoost",
+        score: 0,
+        description: "Handles categorical features automatically. Fast training.",
+        useCases: "Classification, Regression",
+      },
+      {
+        name: "SVM",
+        score: 0,
+        description: "Effective for high-dimensional spaces. Good with clear margins.",
+        useCases: "Classification, Regression",
+      },
+      {
+        name: "K-Nearest Neighbors",
+        score: 0,
+        description: "Simple and interpretable. Good for small to medium datasets.",
+        useCases: "Classification, Regression",
+      },
+      {
+        name: "Logistic Regression",
+        score: 0,
+        description: "Simple and interpretable. Good baseline model.",
+        useCases: "Binary Classification",
+      },
+      {
+        name: "Decision Tree",
+        score: 0,
+        description: "Highly interpretable. Good for feature importance.",
+        useCases: "Classification, Regression",
+      },
+      {
+        name: "AdaBoost",
+        score: 0,
+        description: "Combines weak learners into strong ones. Good with weak patterns.",
+        useCases: "Classification, Regression",
+      }
+    ];
+
+    return algorithms.map(algo => {
+      let score = 0;
+      
+      if (missingValuesPercentage > 5) {
+        if (["XGBoost", "CatBoost", "Random Forest"].includes(algo.name)) {
+          score += 20;
+        }
+      }
+
+      if (dataTypes.categorical > 0) {
+        if (["CatBoost", "Random Forest", "LightGBM"].includes(algo.name)) {
+          score += dataTypes.categorical * 5;
+        }
+      }
+
+      if (totalRows > 10000) {
+        if (["LightGBM", "XGBoost", "Neural Network"].includes(algo.name)) {
+          score += 15;
+        } else if (["SVM", "K-Nearest Neighbors"].includes(algo.name)) {
+          score -= 10;
+        }
+      } else if (totalRows < 1000) {
+        if (["Logistic Regression", "Decision Tree", "K-Nearest Neighbors"].includes(algo.name)) {
+          score += 15;
+        }
+      }
+
+      if (dataTypes.numerical > 0) {
+        if (["Neural Network", "XGBoost", "Random Forest"].includes(algo.name)) {
+          score += dataTypes.numerical * 3;
+        }
+      }
+
+      return {
+        ...algo,
+        score: Math.min(100, Math.max(0, score)),
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+  };
+
   const renderStepContent = () => {
     switch (step) {
       case 1:
@@ -233,7 +347,15 @@ const Index = () => {
         }
 
         const dataTypes = calculateDataTypes(datasetStats.dataSample);
-        const missingValuesPercentage = calculateMissingValues(datasetStats.dataSample);
+        const missingValuesPercentage = Number(calculateMissingValues(datasetStats.dataSample));
+        const algorithms = getRecommendedAlgorithms(
+          dataTypes,
+          datasetStats.rows,
+          missingValuesPercentage
+        );
+
+        const topAlgorithms = algorithms.slice(0, 5);
+        const otherAlgorithms = algorithms.slice(5);
 
         return (
           <div>
@@ -286,6 +408,27 @@ const Index = () => {
           </div>
         );
       case 3:
+        if (!datasetStats) {
+          return (
+            <div className="text-center p-8">
+              <p className="text-primary-600">
+                Please upload a dataset first to view algorithm recommendations
+              </p>
+            </div>
+          );
+        }
+
+        const dataTypes = calculateDataTypes(datasetStats.dataSample);
+        const missingValuesPercentage = Number(calculateMissingValues(datasetStats.dataSample));
+        const algorithms = getRecommendedAlgorithms(
+          dataTypes,
+          datasetStats.rows,
+          missingValuesPercentage
+        );
+
+        const topAlgorithms = algorithms.slice(0, 5);
+        const otherAlgorithms = algorithms.slice(5);
+
         return (
           <div>
             <div className="text-center mb-8">
@@ -296,97 +439,61 @@ const Index = () => {
                 Based on your dataset characteristics
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                {
-                  name: "Random Forest",
-                  accuracy: "92%",
-                  description:
-                    "Best for handling both numerical and categorical data. Excellent for avoiding overfitting.",
-                  useCases: "Classification, Regression",
-                },
-                {
-                  name: "XGBoost",
-                  accuracy: "89%",
-                  description:
-                    "Powerful gradient boosting algorithm. Handles missing values well.",
-                  useCases: "Classification, Regression, Ranking",
-                },
-                {
-                  name: "Neural Network",
-                  accuracy: "87%",
-                  description:
-                    "Deep learning model for complex patterns. Good with large datasets.",
-                  useCases: "Classification, Regression, Pattern Recognition",
-                },
-                {
-                  name: "LightGBM",
-                  accuracy: "88%",
-                  description:
-                    "Fast gradient boosting framework. Efficient with large datasets.",
-                  useCases: "Classification, Regression",
-                },
-                {
-                  name: "CatBoost",
-                  accuracy: "90%",
-                  description:
-                    "Handles categorical features automatically. Fast training.",
-                  useCases: "Classification, Regression",
-                },
-                {
-                  name: "SVM",
-                  accuracy: "85%",
-                  description:
-                    "Effective for high-dimensional spaces. Good with clear margins.",
-                  useCases: "Classification, Regression",
-                },
-                {
-                  name: "K-Nearest Neighbors",
-                  accuracy: "83%",
-                  description:
-                    "Simple and interpretable. Good for small to medium datasets.",
-                  useCases: "Classification, Regression",
-                },
-                {
-                  name: "Logistic Regression",
-                  accuracy: "82%",
-                  description:
-                    "Simple and interpretable. Good baseline model.",
-                  useCases: "Binary Classification",
-                },
-                {
-                  name: "Decision Tree",
-                  accuracy: "81%",
-                  description:
-                    "Highly interpretable. Good for feature importance.",
-                  useCases: "Classification, Regression",
-                },
-                {
-                  name: "AdaBoost",
-                  accuracy: "86%",
-                  description:
-                    "Combines weak learners into strong ones. Good with weak patterns.",
-                  useCases: "Classification, Regression",
-                },
-              ].map((algo, i) => (
-                <Card key={i}>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-medium">{algo.name}</h3>
-                      <span className="text-accent font-semibold">
-                        {algo.accuracy}
-                      </span>
-                    </div>
-                    <p className="text-sm text-primary-600 mb-2">
-                      {algo.description}
-                    </p>
-                    <p className="text-xs text-primary-500">
-                      <span className="font-semibold">Use Cases:</span>{" "}
-                      {algo.useCases}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
+
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold text-primary-900 mb-4">
+                  Top Recommendations
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {topAlgorithms.map((algo, i) => (
+                    <Card key={i} className="border-2 border-accent">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-medium">{algo.name}</h3>
+                          <span className="text-accent font-semibold">
+                            {algo.score}% Match
+                          </span>
+                        </div>
+                        <p className="text-sm text-primary-600 mb-2">
+                          {algo.description}
+                        </p>
+                        <p className="text-xs text-primary-500">
+                          <span className="font-semibold">Use Cases:</span>{" "}
+                          {algo.useCases}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-primary-900 mb-4">
+                  Other Available Algorithms
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {otherAlgorithms.map((algo, i) => (
+                    <Card key={i}>
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-medium">{algo.name}</h3>
+                          <span className="text-primary-600 font-semibold">
+                            {algo.score}% Match
+                          </span>
+                        </div>
+                        <p className="text-sm text-primary-600 mb-2">
+                          {algo.description}
+                        </p>
+                        <p className="text-xs text-primary-500">
+                          <span className="font-semibold">Use Cases:</span>{" "}
+                          {algo.useCases}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         );
