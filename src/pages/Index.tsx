@@ -9,7 +9,12 @@ import { toast } from "sonner";
 const Index = () => {
   const [step, setStep] = useState(1);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [datasetStats, setDatasetStats] = useState<{ rows: number; columns: number } | null>(null);
+  const [datasetStats, setDatasetStats] = useState<{
+    rows: number;
+    columns: number;
+    columnNames: string[];
+    dataSample: Record<string, string>[];
+  } | null>(null);
 
   const steps = [
     {
@@ -48,7 +53,15 @@ const Index = () => {
     }
   };
 
-  const handleFileSelect = (file: File | null, stats?: { rows: number; columns: number }) => {
+  const handleFileSelect = (
+    file: File | null,
+    stats?: {
+      rows: number;
+      columns: number;
+      columnNames: string[];
+      dataSample: Record<string, string>[];
+    }
+  ) => {
     setSelectedFile(file);
     if (file && stats) {
       setDatasetStats(stats);
@@ -76,24 +89,76 @@ const Index = () => {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-6 p-6 bg-primary-50 rounded-lg"
+                className="mt-6 space-y-6"
               >
-                <h3 className="text-lg font-semibold text-primary-900 mb-4">
-                  Dataset Analysis
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white p-4 rounded-lg shadow-sm">
-                    <p className="text-sm text-primary-600">Total Rows</p>
-                    <p className="text-2xl font-semibold text-primary-900">
-                      {datasetStats.rows.toLocaleString()}
-                    </p>
+                <div className="bg-primary-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-primary-900 mb-4">
+                    Dataset Analysis
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <p className="text-sm text-primary-600">Total Rows</p>
+                      <p className="text-2xl font-semibold text-primary-900">
+                        {datasetStats.rows.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <p className="text-sm text-primary-600">Total Columns</p>
+                      <p className="text-2xl font-semibold text-primary-900">
+                        {datasetStats.columns.toLocaleString()}
+                      </p>
+                    </div>
                   </div>
-                  <div className="bg-white p-4 rounded-lg shadow-sm">
-                    <p className="text-sm text-primary-600">Total Columns</p>
-                    <p className="text-2xl font-semibold text-primary-900">
-                      {datasetStats.columns.toLocaleString()}
-                    </p>
+                </div>
+
+                <div className="bg-primary-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-primary-900 mb-4">
+                    Column Names
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {datasetStats.columnNames.map((column, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-white rounded-full text-sm text-primary-600"
+                      >
+                        {column}
+                      </span>
+                    ))}
                   </div>
+                </div>
+
+                <div className="bg-primary-50 p-6 rounded-lg overflow-x-auto">
+                  <h3 className="text-lg font-semibold text-primary-900 mb-4">
+                    Data Preview (First 5 rows)
+                  </h3>
+                  <table className="min-w-full bg-white rounded-lg overflow-hidden">
+                    <thead className="bg-primary-50">
+                      <tr>
+                        {datasetStats.columnNames.map((column, index) => (
+                          <th
+                            key={index}
+                            className="px-4 py-2 text-left text-sm font-medium text-primary-900"
+                          >
+                            {column}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {datasetStats.dataSample.map((row, rowIndex) => (
+                        <tr key={rowIndex} className="border-t border-primary-100">
+                          {datasetStats.columnNames.map((column, colIndex) => (
+                            <td
+                              key={colIndex}
+                              className="px-4 py-2 text-sm text-primary-600"
+                            >
+                              {String(row[column])}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </motion.div>
             )}

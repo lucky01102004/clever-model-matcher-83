@@ -5,7 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import Papa from "papaparse";
 
 interface FileUploadProps {
-  onFileSelect: (file: File | null, stats?: { rows: number; columns: number }) => void;
+  onFileSelect: (file: File | null, stats?: { 
+    rows: number; 
+    columns: number;
+    columnNames: string[];
+    dataSample: Record<string, string>[];
+  }) => void;
 }
 
 export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
@@ -27,10 +32,15 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
     reader.onload = (event) => {
       if (event.target?.result) {
         Papa.parse(event.target.result as string, {
+          header: true,
+          dynamicTyping: true,
           complete: (results) => {
+            const columnNames = Object.keys(results.data[0] || {});
             const stats = {
-              rows: results.data.length - 1, // Subtract 1 to account for header row
-              columns: results.data[0]?.length || 0
+              rows: results.data.length,
+              columns: columnNames.length,
+              columnNames: columnNames,
+              dataSample: results.data.slice(0, 5) as Record<string, string>[]
             };
             onFileSelect(file, stats);
           },
