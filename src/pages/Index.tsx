@@ -71,6 +71,63 @@ const Index = () => {
     }
   };
 
+  const calculateDataTypes = (data: Record<string, string>[]) => {
+    const columnTypes: Record<string, Set<string>> = {};
+    
+    Object.keys(data[0] || {}).forEach(column => {
+      columnTypes[column] = new Set();
+    });
+
+    data.forEach(row => {
+      Object.entries(row).forEach(([column, value]) => {
+        if (value === null || value === undefined || value === "") {
+          columnTypes[column].add("missing");
+        } else if (!isNaN(Number(value))) {
+          columnTypes[column].add("numerical");
+        } else if (value.toLowerCase() === "true" || value.toLowerCase() === "false") {
+          columnTypes[column].add("boolean");
+        } else if (!isNaN(Date.parse(value))) {
+          columnTypes[column].add("datetime");
+        } else {
+          columnTypes[column].add("categorical");
+        }
+      });
+    });
+
+    const typeCounts = {
+      numerical: 0,
+      categorical: 0,
+      datetime: 0,
+      boolean: 0
+    };
+
+    Object.values(columnTypes).forEach(typeSet => {
+      const types = Array.from(typeSet);
+      if (types.includes("numerical")) typeCounts.numerical++;
+      else if (types.includes("datetime")) typeCounts.datetime++;
+      else if (types.includes("boolean")) typeCounts.boolean++;
+      else typeCounts.categorical++;
+    });
+
+    return typeCounts;
+  };
+
+  const calculateMissingValues = (data: Record<string, string>[]) => {
+    let totalCells = 0;
+    let missingCells = 0;
+
+    data.forEach(row => {
+      Object.values(row).forEach(value => {
+        totalCells++;
+        if (value === null || value === undefined || value === "") {
+          missingCells++;
+        }
+      });
+    });
+
+    return ((missingCells / totalCells) * 100).toFixed(1);
+  };
+
   const renderStepContent = () => {
     switch (step) {
       case 1:
@@ -165,6 +222,19 @@ const Index = () => {
           </div>
         );
       case 2:
+        if (!datasetStats) {
+          return (
+            <div className="text-center p-8">
+              <p className="text-primary-600">
+                Please upload a dataset first to view analysis
+              </p>
+            </div>
+          );
+        }
+
+        const dataTypes = calculateDataTypes(datasetStats.dataSample);
+        const missingValuesPercentage = calculateMissingValues(datasetStats.dataSample);
+
         return (
           <div>
             <div className="text-center mb-8">
@@ -194,9 +264,9 @@ const Index = () => {
                   <CardContent className="p-6">
                     <h3 className="text-lg font-medium mb-2">Basic Statistics</h3>
                     <ul className="space-y-2 text-sm text-primary-600">
-                      <li>Rows: 1,000</li>
-                      <li>Columns: 15</li>
-                      <li>Missing Values: 2%</li>
+                      <li>Rows: {datasetStats.rows.toLocaleString()}</li>
+                      <li>Columns: {datasetStats.columns.toLocaleString()}</li>
+                      <li>Missing Values: {missingValuesPercentage}%</li>
                     </ul>
                   </CardContent>
                 </Card>
@@ -204,9 +274,10 @@ const Index = () => {
                   <CardContent className="p-6">
                     <h3 className="text-lg font-medium mb-2">Data Types</h3>
                     <ul className="space-y-2 text-sm text-primary-600">
-                      <li>Numerical: 8 columns</li>
-                      <li>Categorical: 5 columns</li>
-                      <li>Datetime: 2 columns</li>
+                      <li>Numerical: {dataTypes.numerical} columns</li>
+                      <li>Categorical: {dataTypes.categorical} columns</li>
+                      <li>Datetime: {dataTypes.datetime} columns</li>
+                      <li>Boolean: {dataTypes.boolean} columns</li>
                     </ul>
                   </CardContent>
                 </Card>
