@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { FileUpload } from "@/components/FileUpload";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,11 @@ const Index = () => {
   const handleBeginAnalysis = () => {
     if (step === 1 && !selectedFile) {
       toast.error("Please upload a dataset before proceeding");
+      return;
+    }
+
+    if (step === 3 && !selectedAlgorithm) {
+      toast.error("Please select an algorithm before proceeding");
       return;
     }
 
@@ -246,6 +252,212 @@ const Index = () => {
       };
     })
     .sort((a, b) => b.score - a.score);
+  };
+
+  const generateAlgorithmCode = (algorithm: string, fileName: string) => {
+    const imports = {
+      "Random Forest": "from sklearn.ensemble import RandomForestClassifier",
+      "XGBoost": "import xgboost as xgb\nfrom xgboost import XGBClassifier",
+      "Neural Network": "from sklearn.neural_network import MLPClassifier",
+      "LightGBM": "import lightgbm as lgb\nfrom lightgbm import LGBMClassifier",
+      "CatBoost": "from catboost import CatBoostClassifier",
+      "SVM": "from sklearn.svm import SVC",
+      "K-Nearest Neighbors": "from sklearn.neighbors import KNeighborsClassifier",
+      "Logistic Regression": "from sklearn.linear_model import LogisticRegression",
+      "Decision Tree": "from sklearn.tree import DecisionTreeClassifier",
+      "AdaBoost": "from sklearn.ensemble import AdaBoostClassifier"
+    };
+
+    const modelInit = {
+      "Random Forest": `model = RandomForestClassifier(
+    n_estimators=100,
+    max_depth=10,
+    random_state=42
+)`,
+      "XGBoost": `model = XGBClassifier(
+    n_estimators=100,
+    learning_rate=0.1,
+    max_depth=6,
+    random_state=42
+)`,
+      "Neural Network": `model = MLPClassifier(
+    hidden_layer_sizes=(100, 50),
+    activation='relu',
+    max_iter=1000,
+    random_state=42
+)`,
+      "LightGBM": `model = LGBMClassifier(
+    n_estimators=100,
+    learning_rate=0.1,
+    max_depth=6,
+    random_state=42
+)`,
+      "CatBoost": `model = CatBoostClassifier(
+    iterations=100,
+    learning_rate=0.1,
+    depth=6,
+    random_state=42,
+    verbose=False
+)`,
+      "SVM": `model = SVC(
+    kernel='rbf',
+    C=1.0,
+    gamma='scale',
+    probability=True,
+    random_state=42
+)`,
+      "K-Nearest Neighbors": `model = KNeighborsClassifier(
+    n_neighbors=5,
+    weights='uniform',
+    algorithm='auto'
+)`,
+      "Logistic Regression": `model = LogisticRegression(
+    C=1.0,
+    max_iter=1000,
+    random_state=42
+)`,
+      "Decision Tree": `model = DecisionTreeClassifier(
+    max_depth=10,
+    min_samples_split=2,
+    random_state=42
+)`,
+      "AdaBoost": `model = AdaBoostClassifier(
+    n_estimators=100,
+    learning_rate=1.0,
+    random_state=42
+)`
+    };
+
+    return `import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import confusion_matrix, classification_report, mean_squared_error
+${imports[algorithm as keyof typeof imports]}
+
+# Load the dataset
+df = pd.read_csv('${fileName || "dataset.csv"}')
+
+# Display basic information
+print("Dataset Shape:", df.shape)
+print("\\nFirst 5 rows:")
+print(df.head())
+print("\\nData Types:")
+print(df.dtypes)
+print("\\nSummary Statistics:")
+print(df.describe())
+
+# Handle missing values
+df = df.fillna(df.mean() if df.select_dtypes(include=[np.number]).columns.any() else df.mode().iloc[0])
+
+# Identify categorical columns and numerical columns
+categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+numerical_cols = df.select_dtypes(include=[np.number]).columns
+
+# Assume the target column is the last one - adjust as needed
+target_column = df.columns[-1]
+feature_columns = [col for col in df.columns if col != target_column]
+
+# Prepare features and target
+X = df[feature_columns]
+y = df[target_column]
+
+# Split the dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Preprocessing for numerical and categorical data
+numerical_transformer = Pipeline(steps=[
+    ('scaler', StandardScaler())
+])
+
+categorical_transformer = Pipeline(steps=[
+    ('onehot', OneHotEncoder(handle_unknown='ignore'))
+])
+
+# Combine preprocessing steps
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numerical_transformer, numerical_cols),
+        ('cat', categorical_transformer, categorical_cols)
+    ]
+)
+
+# Initialize and train the model
+${modelInit[algorithm as keyof typeof modelInit]}
+
+# Create and fit pipeline
+pipeline = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('model', model)
+])
+
+# Train the model
+pipeline.fit(X_train, y_train)
+
+# Make predictions
+y_pred = pipeline.predict(X_test)
+
+# Evaluation metrics
+print("\\nModel Evaluation:")
+print("--------------------")
+
+try:
+    # Classification metrics (will work if target is categorical)
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred, average='weighted', zero_division=0)
+    recall = recall_score(y_test, y_pred, average='weighted', zero_division=0)
+    f1 = f1_score(y_test, y_pred, average='weighted', zero_division=0)
+    
+    print(f"Accuracy: {accuracy:.4f}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"F1 Score: {f1:.4f}")
+    
+    print("\\nConfusion Matrix:")
+    print(confusion_matrix(y_test, y_pred))
+    
+    print("\\nClassification Report:")
+    print(classification_report(y_test, y_pred, zero_division=0))
+    
+except:
+    # Regression metrics (will work if target is numerical)
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = np.sqrt(mse)
+    r2 = r2_score(y_test, y_pred)
+    
+    print(f"Mean Squared Error: {mse:.4f}")
+    print(f"Root Mean Squared Error: {rmse:.4f}")
+    print(f"R² Score: {r2:.4f}")
+
+# Feature importance (for models that support it)
+try:
+    if hasattr(pipeline['model'], 'feature_importances_'):
+        importances = pipeline['model'].feature_importances_
+        feature_names = X.columns
+        
+        # Get indices of features sorted by importance
+        indices = np.argsort(importances)[::-1]
+        
+        print("\\nFeature Importance:")
+        for i, idx in enumerate(indices):
+            if i < 10:  # Print top 10 features
+                print(f"{feature_names[idx]}: {importances[idx]:.4f}")
+except:
+    pass
+
+print("\\nPredictions (First 5):")
+print(y_pred[:5])
+
+# Save the model
+import joblib
+joblib.dump(pipeline, '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.pkl')
+print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.pkl'")
+`;
   };
 
   const renderStepContent = () => {
@@ -525,44 +737,95 @@ const Index = () => {
                 Generated Code
               </h2>
               <p className="text-primary-600">
-                Ready-to-use Python code for your selected algorithm
+                Ready-to-use Python code with evaluation metrics
               </p>
             </div>
-            <Card>
-              <CardContent className="p-6">
-                <pre className="bg-primary-50 p-4 rounded-lg overflow-x-auto">
-                  <code className="text-sm text-primary-900">
-                    {`import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
 
-# Load the dataset
-df = pd.read_csv('${selectedFile?.name || "dataset.csv"}')
+            {!selectedAlgorithm ? (
+              <div className="text-center p-6 bg-yellow-50 rounded-lg mb-6">
+                <p className="text-yellow-700">
+                  Please go back and select an algorithm to generate code
+                </p>
+              </div>
+            ) : (
+              <>
+                <Card className="mb-6">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-medium">Selected Algorithm</h3>
+                        <p className="text-accent font-semibold">{selectedAlgorithm}</p>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-medium">Dataset</h3>
+                        <p className="text-primary-600">{selectedFile?.name || "dataset.csv"}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-# Prepare features and target
-X = df.drop('target', axis=1)
-y = df['target']
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-medium mb-4">Python Code with Evaluation Metrics</h3>
+                    <pre className="bg-primary-50 p-4 rounded-lg overflow-x-auto text-left">
+                      <code className="text-sm text-primary-900 whitespace-pre-wrap">
+                        {generateAlgorithmCode(selectedAlgorithm, selectedFile?.name || "dataset.csv")}
+                      </code>
+                    </pre>
+                    <div className="mt-6">
+                      <Button 
+                        className="bg-accent hover:bg-accent/90 text-white"
+                        onClick={() => {
+                          const code = generateAlgorithmCode(selectedAlgorithm, selectedFile?.name || "dataset.csv");
+                          const blob = new Blob([code], { type: 'text/plain' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${selectedAlgorithm.toLowerCase().replace(/\s+/g, '_')}_script.py`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                          toast.success("Code downloaded successfully");
+                        }}
+                      >
+                        Download Python Script
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
 
-# Split the dataset
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
-
-# Initialize and train the model
-model = RandomForestClassifier(
-    n_estimators=100,
-    max_depth=10,
-    random_state=42
-)
-model.fit(X_train, y_train)
-
-# Make predictions
-predictions = model.predict(X_test)
-`}
-                  </code>
-                </pre>
-              </CardContent>
-            </Card>
+                <Card className="mt-6">
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-medium mb-4">Expected Output Preview</h3>
+                    <div className="bg-black text-green-400 p-4 rounded-lg overflow-x-auto font-mono text-sm">
+                      <p>Dataset Shape: (1000, 10)</p>
+                      <p>&nbsp;</p>
+                      <p>First 5 rows:</p>
+                      <p>[sample data preview would appear here]</p>
+                      <p>&nbsp;</p>
+                      <p>Model Evaluation:</p>
+                      <p>--------------------</p>
+                      <p>Accuracy: 0.8756</p>
+                      <p>Precision: 0.8821</p>
+                      <p>Recall: 0.8756</p>
+                      <p>F1 Score: 0.8783</p>
+                      <p>&nbsp;</p>
+                      <p>Confusion Matrix:</p>
+                      <p>[confusion matrix would appear here]</p>
+                      <p>&nbsp;</p>
+                      <p>Classification Report:</p>
+                      <p>[detailed classification metrics would appear here]</p>
+                      <p>&nbsp;</p>
+                      <p>Feature Importance:</p>
+                      {datasetStats && datasetStats.columnNames.slice(0, 3).map((col, i) => (
+                        <p key={i}>{col}: {(Math.random() * 0.3 + 0.1).toFixed(4)}</p>
+                      ))}
+                      <p>&nbsp;</p>
+                      <p>Model saved as '{selectedAlgorithm.toLowerCase().replace(/\s+/g, '_')}_model.pkl'</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
         );
       default:
