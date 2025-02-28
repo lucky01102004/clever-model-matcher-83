@@ -38,7 +38,7 @@ const Index = () => {
     },
     {
       title: "Code Generation",
-      description: "Download ready-to-use Python code",
+      description: "Get ready-to-use Python code",
       icon: Code,
     },
   ];
@@ -1375,6 +1375,81 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
     return allDescriptions[algorithm] || "This code implements the selected machine learning algorithm on your dataset.";
   };
 
+  const getCodeExplanationBySection = (algorithm: string) => {
+    const isSupervisedAlgorithm = [
+      "Random Forest", "XGBoost", "Neural Network", "LightGBM", "CatBoost", 
+      "SVM", "K-Nearest Neighbors", "Logistic Regression", "Decision Tree", "AdaBoost"
+    ].includes(algorithm);
+
+    if (isSupervisedAlgorithm) {
+      return [
+        {
+          title: "Data Loading & Exploration",
+          explanation: "This section loads your dataset from a CSV file and performs initial data exploration. It displays basic information about the dataset including shape, data types, and statistics."
+        },
+        {
+          title: "Data Preprocessing",
+          explanation: "This section prepares your data for modeling by handling missing values, identifying categorical and numerical features, and preparing feature and target variables."
+        },
+        {
+          title: "Feature Engineering & Model Setup",
+          explanation: "Sets up preprocessing pipelines for both categorical and numerical features. Categorical features are one-hot encoded while numerical features are scaled."
+        },
+        {
+          title: "Model Training & Prediction",
+          explanation: "Initializes the selected model with optimized hyperparameters, trains it on the training data, and makes predictions on the test set."
+        },
+        {
+          title: "Evaluation & Visualization",
+          explanation: "Automatically determines whether your problem is classification or regression and calculates appropriate metrics. For classification, it includes accuracy, precision, recall, F1-score, and creates a confusion matrix visualization."
+        },
+        {
+          title: "Feature Importance Analysis",
+          explanation: "Analyzes which features have the most impact on predictions and visualizes these insights to help you understand what's driving model decisions."
+        },
+        {
+          title: "Model Saving",
+          explanation: "Saves the trained model pipeline (including preprocessors) to a file for future use in production environments."
+        }
+      ];
+    } else {
+      return [
+        {
+          title: "Data Loading & Exploration",
+          explanation: "Loads your dataset and displays fundamental information about its structure, data types, and descriptive statistics."
+        },
+        {
+          title: "Data Preprocessing",
+          explanation: "Handles missing values and extracts numerical features for unsupervised learning. All features are standardized to ensure equal contribution to the analysis."
+        },
+        {
+          title: "Model Initialization & Fitting",
+          explanation: "Initializes the selected unsupervised algorithm and applies it to the standardized data. Parameters are optimized for your dataset size and characteristics."
+        },
+        {
+          title: "Clustering or Dimensionality Reduction",
+          explanation: algorithm.includes("Clustering") || algorithm === "Gaussian Mixture Models" ? 
+            "Assigns data points to clusters based on similarities and adds cluster labels to the original dataset." :
+            "Transforms high-dimensional data into lower dimensions while preserving important relationships between data points."
+        },
+        {
+          title: "Visualization & Evaluation",
+          explanation: "Creates visualizations appropriate to the algorithm type. For clustering, this includes cluster plots and distribution. For dimensionality reduction, it visualizes the transformed data and explained variance."
+        },
+        {
+          title: "Analysis & Interpretation",
+          explanation: algorithm.includes("Clustering") || algorithm === "Gaussian Mixture Models" ? 
+            "Provides statistical summaries of each cluster to help you understand the characteristics of grouped data." :
+            "Provides metrics to evaluate the quality of the dimensionality reduction or anomaly detection."
+        },
+        {
+          title: "Model Saving",
+          explanation: "Saves the trained model for later use in analyzing new data points."
+        }
+      ];
+    }
+  };
+
   const renderStepContent = () => {
     switch (step) {
       case 1:
@@ -1795,45 +1870,48 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
                   </CardContent>
                 </Card>
 
-                <Card className="mb-6">
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-medium mb-4">Code Description</h3>
-                    <div className="bg-primary-50 p-4 rounded-lg">
-                      <p className="text-primary-800 whitespace-pre-line">
-                        {getAlgorithmDescription(selectedAlgorithm)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Code Explanation */}
+                  <Card className="h-full">
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-medium mb-4">Code Explanation</h3>
+                      <div className="bg-primary-50 p-4 rounded-lg space-y-4 h-[600px] overflow-y-auto">
+                        {/* Algorithm Description */}
+                        <div>
+                          <h4 className="text-md font-semibold text-primary-900 mb-2">Overview</h4>
+                          <p className="text-primary-800 whitespace-pre-line text-sm">
+                            {getAlgorithmDescription(selectedAlgorithm)}
+                          </p>
+                        </div>
+                        
+                        {/* Code Section Explanations */}
+                        <div className="mt-4 pt-4 border-t border-primary-200">
+                          <h4 className="text-md font-semibold text-primary-900 mb-2">Code Breakdown</h4>
+                          <div className="space-y-3">
+                            {getCodeExplanationBySection(selectedAlgorithm).map((section, idx) => (
+                              <div key={idx} className="bg-white p-3 rounded-md shadow-sm">
+                                <h5 className="text-sm font-medium text-accent mb-1">{section.title}</h5>
+                                <p className="text-xs text-primary-700">{section.explanation}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-medium mb-4">Python Code</h3>
-                    <pre className="bg-primary-50 p-4 rounded-lg overflow-x-auto text-left">
-                      <code className="text-sm text-primary-900 whitespace-pre-wrap">
-                        {generateAlgorithmCode(selectedAlgorithm, selectedFile?.name || "dataset.csv")}
-                      </code>
-                    </pre>
-                    <div className="mt-6">
-                      <Button 
-                        className="bg-accent hover:bg-accent/90 text-white"
-                        onClick={() => {
-                          const code = generateAlgorithmCode(selectedAlgorithm, selectedFile?.name || "dataset.csv");
-                          const blob = new Blob([code], { type: 'text/plain' });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = `${selectedAlgorithm.toLowerCase().replace(/\s+/g, '_')}_script.py`;
-                          a.click();
-                          URL.revokeObjectURL(url);
-                          toast.success("Code downloaded successfully");
-                        }}
-                      >
-                        Download Python Script
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                  {/* Python Code */}
+                  <Card className="h-full">
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-medium mb-4">Python Code</h3>
+                      <pre className="bg-primary-50 p-4 rounded-lg overflow-auto text-left h-[600px] text-sm text-primary-900 whitespace-pre-wrap">
+                        <code>
+                          {generateAlgorithmCode(selectedAlgorithm, selectedFile?.name || "dataset.csv")}
+                        </code>
+                      </pre>
+                    </CardContent>
+                  </Card>
+                </div>
               </>
             )}
           </div>
@@ -1900,26 +1978,22 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="max-w-3xl mx-auto"
+          className="max-w-6xl mx-auto"
         >
           <Card className="p-8">
             {renderStepContent()}
-            <div className="mt-8 text-center">
-              <Button
-                size="lg"
-                className="bg-accent hover:bg-accent/90 text-white"
-                onClick={handleBeginAnalysis}
-              >
-                {step < steps.length ? (
-                  <>
-                    Next Step
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </>
-                ) : (
-                  "Download Code"
-                )}
-              </Button>
-            </div>
+            {step < steps.length && (
+              <div className="mt-8 text-center">
+                <Button
+                  size="lg"
+                  className="bg-accent hover:bg-accent/90 text-white"
+                  onClick={handleBeginAnalysis}
+                >
+                  Next Step
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </Card>
         </motion.div>
       </div>
