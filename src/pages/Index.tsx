@@ -1199,6 +1199,182 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
 `;
   };
 
+  const getAlgorithmDescription = (algorithm: string) => {
+    // Supervised algorithms descriptions
+    const supervisedDescriptions: Record<string, string> = {
+      "Random Forest": `This code implements a Random Forest classifier on your dataset. It:
+• Automatically splits your data into training and testing sets
+• Handles preprocessing for both numerical and categorical features
+• Uses the last column as the target variable
+• Evaluates model performance with metrics like accuracy, precision, recall, and F1 score
+• Generates a confusion matrix visualization to see prediction patterns
+• Creates feature importance plots to understand which variables have the most impact
+• Saves the trained model for future use`,
+
+      "XGBoost": `This code implements an XGBoost model on your dataset. It:
+• Leverages gradient boosting for high performance prediction
+• Preprocesses all data types automatically
+• Evaluates with comprehensive classification or regression metrics
+• Visualizes confusion matrix or regression performance
+• Shows feature importance to understand key predictors
+• Handles both categorical and numerical features
+• Implements early stopping to prevent overfitting
+• Saves the trained model for future deployment`,
+
+      "Neural Network": `This code implements a Neural Network (MLP) classifier on your dataset. It:
+• Creates a multi-layer perceptron network with two hidden layers
+• Automatically preprocesses and normalizes all input features
+• Uses ReLU activation for better gradient flow
+• Evaluates model performance with classification metrics
+• Visualizes prediction results through confusion matrix
+• Can automatically detect whether you're solving a classification or regression problem
+• Saves the trained model for deployment`,
+
+      "LightGBM": `This code implements a LightGBM model on your dataset. It:
+• Utilizes gradient boosting with leaf-wise tree growth for efficiency
+• Automatically handles feature preprocessing
+• Uses the last column as your target variable
+• Evaluates with comprehensive metrics appropriate for your problem
+• Creates visualizations of model performance
+• Identifies the most important features that drive predictions
+• Saves the trained model for future use`,
+
+      "CatBoost": `This code implements a CatBoost classifier on your dataset. It:
+• Provides automatic handling of categorical features without preprocessing
+• Uses innovative ordered boosting to reduce overfitting
+• Preprocesses numerical data for optimal performance
+• Evaluates model with comprehensive metrics
+• Visualizes prediction patterns through confusion matrix
+• Identifies the most important features that drive predictions
+• Saves the trained model for future use`,
+
+      "SVM": `This code implements a Support Vector Machine classifier on your dataset. It:
+• Uses RBF kernel for handling non-linear relationships
+• Automatically scales features for optimal performance
+• Evaluates model with comprehensive metrics
+• Visualizes prediction patterns through confusion matrix
+• Detects whether your problem is classification or regression
+• Handles both categorical and numerical features
+• Saves the trained model for deployment`,
+
+      "K-Nearest Neighbors": `This code implements a K-Nearest Neighbors classifier on your dataset. It:
+• Uses 5 neighbors for prediction by default
+• Automatically preprocesses and scales features
+• Evaluates model with classification or regression metrics
+• Visualizes prediction patterns through confusion matrix
+• Detects problem type (classification/regression) automatically
+• Works with both numerical and categorical features through preprocessing
+• Saves the trained model for future use`,
+
+      "Logistic Regression": `This code implements a Logistic Regression model on your dataset. It:
+• Creates a simple yet effective classifier for binary problems
+• Automatically handles feature scaling and preprocessing
+• Evaluates with precision, recall, accuracy and F1 score
+• Visualizes prediction results through confusion matrix
+• Works with both numerical and categorical features
+• Uses regularization to prevent overfitting
+• Saves the trained model for future use`,
+
+      "Decision Tree": `This code implements a Decision Tree classifier on your dataset. It:
+• Creates a highly interpretable model with clear decision rules
+• Automatically handles different feature types without scaling
+• Evaluates with comprehensive classification metrics
+• Visualizes prediction patterns through confusion matrix
+• Shows feature importance to understand key predictors
+• Controls tree depth to prevent overfitting
+• Saves the trained model for future use`,
+
+      "AdaBoost": `This code implements an AdaBoost classifier on your dataset. It:
+• Combines multiple weak learners into a strong predictive model
+• Automatically weights difficult-to-classify examples
+• Handles preprocessing of different feature types
+• Evaluates with comprehensive metrics
+• Visualizes prediction results through confusion matrix
+• Shows feature importance to understand key predictors
+• Saves the trained model for future use`
+    };
+
+    // Unsupervised algorithms descriptions
+    const unsupervisedDescriptions: Record<string, string> = {
+      "K-Means Clustering": `This code implements K-Means clustering on your dataset. It:
+• Automatically groups your data into 3 distinct clusters
+• Standardizes all numerical features for better clustering
+• Evaluates cluster quality using silhouette score
+• Creates visualizations of the clusters using PCA for high-dimensional data
+• Shows the distribution of data points across clusters
+• Provides statistical summaries of each cluster's characteristics
+• Saves the trained model for future use on new data`,
+
+      "DBSCAN": `This code implements DBSCAN density-based clustering on your dataset. It:
+• Identifies clusters of arbitrary shapes based on data density
+• Automatically detects and labels noise points
+• Works without specifying the number of clusters in advance
+• Creates visualizations of clusters with PCA for high-dimensional data
+• Shows cluster distribution including noise points
+• Adapts to clusters of varying density and size
+• Saves the clustering model for future use`,
+
+      "Hierarchical Clustering": `This code implements Hierarchical Clustering on your dataset. It:
+• Creates a hierarchical structure of nested clusters
+• Visualizes this hierarchy through a dendrogram
+• Applies agglomerative (bottom-up) clustering
+• Creates 2D visualizations of the final clusters
+• Shows cluster distributions and characteristics
+• Works well for identifying relationships between clusters
+• Saves the clustering model for future use`,
+
+      "PCA": `This code implements Principal Component Analysis on your dataset. It:
+• Reduces dimensionality while preserving maximum variance
+• Shows explained variance for each principal component
+• Visualizes how much of the original information is retained
+• Creates 2D scatter plots of the first two components
+• Shows feature loadings to interpret what each component represents
+• Merges PCA results with original data for further analysis
+• Saves the PCA model for future transformations`,
+
+      "t-SNE": `This code implements t-SNE dimensionality reduction on your dataset. It:
+• Creates a 2D representation of your high-dimensional data
+• Preserves local relationships between data points
+• Visualizes natural clusters in your data
+• Applies K-means clustering to the t-SNE results
+• Shows cluster distributions
+• Works well for visualizing complex non-linear structures
+• Saves the model for reference (though t-SNE doesn't transform new data)`,
+
+      "UMAP": `This code implements UMAP dimensionality reduction on your dataset. It:
+• Creates a 2D representation that preserves both local and global structure
+• Performs faster than t-SNE for large datasets
+• Visualizes natural clusters in your data
+• Applies K-means clustering to the UMAP results
+• Shows cluster distributions
+• Works well for visualizing complex data relationships
+• Saves the model for transforming new data points`,
+
+      "Isolation Forest": `This code implements Isolation Forest for anomaly detection on your dataset. It:
+• Identifies outliers and anomalies in your data
+• Works by isolating observations through random partitioning
+• Creates visualizations of detected outliers
+• Shows which features contribute most to outlier detection
+• Works efficiently on high-dimensional datasets
+• Adapts to different types of anomalies
+• Saves the model for detecting anomalies in new data`,
+
+      "Gaussian Mixture Models": `This code implements Gaussian Mixture Models on your dataset. It:
+• Models your data as a mixture of multiple Gaussian distributions
+• Provides soft cluster assignments with probability scores
+• Evaluates model fit using BIC and AIC information criteria
+• Creates visualizations of the identified clusters
+• Shows cluster distributions and characteristics
+• Visualizes uncertainty in cluster assignments
+• Saves the model for future clustering of new data`
+    };
+
+    // Combine both types of descriptions
+    const allDescriptions = { ...supervisedDescriptions, ...unsupervisedDescriptions };
+    
+    return allDescriptions[algorithm] || "This code implements the selected machine learning algorithm on your dataset.";
+  };
+
   const renderStepContent = () => {
     switch (step) {
       case 1:
@@ -1619,9 +1795,20 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
                   </CardContent>
                 </Card>
 
+                <Card className="mb-6">
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-medium mb-4">Code Description</h3>
+                    <div className="bg-primary-50 p-4 rounded-lg">
+                      <p className="text-primary-800 whitespace-pre-line">
+                        {getAlgorithmDescription(selectedAlgorithm)}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardContent className="p-6">
-                    <h3 className="text-lg font-medium mb-4">Python Code with Evaluation Metrics</h3>
+                    <h3 className="text-lg font-medium mb-4">Python Code</h3>
                     <pre className="bg-primary-50 p-4 rounded-lg overflow-x-auto text-left">
                       <code className="text-sm text-primary-900 whitespace-pre-wrap">
                         {generateAlgorithmCode(selectedAlgorithm, selectedFile?.name || "dataset.csv")}
@@ -1644,64 +1831,6 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
                       >
                         Download Python Script
                       </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="mt-6">
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-medium mb-4">Expected Output Preview</h3>
-                    <div className="bg-black text-green-400 p-4 rounded-lg overflow-x-auto font-mono text-sm">
-                      <p>Dataset Shape: {datasetStats ? `(${datasetStats.rows}, ${datasetStats.columns})` : "(1000, 10)"}</p>
-                      <p>&nbsp;</p>
-                      <p>First 5 rows:</p>
-                      <p>[sample data preview would appear here]</p>
-                      <p>&nbsp;</p>
-                      {learningType === "supervised" ? (
-                        <>
-                          <p>Model Evaluation:</p>
-                          <p>--------------------</p>
-                          <p>Accuracy: 0.8756</p>
-                          <p>Precision: 0.8821</p>
-                          <p>Recall: 0.8756</p>
-                          <p>F1 Score: 0.8783</p>
-                          <p>&nbsp;</p>
-                          <p>Confusion Matrix:</p>
-                          <p>[[45  2  0]</p>
-                          <p> [ 3 50  1]</p>
-                          <p> [ 0  4 45]]</p>
-                          <p>&nbsp;</p>
-                          <p>Classification Report:</p>
-                          <p>              precision    recall  f1-score   support</p>
-                          <p>&nbsp;</p>
-                          <p>     class 0       0.94      0.96      0.95        47</p>
-                          <p>     class 1       0.89      0.93      0.91        54</p>
-                          <p>     class 2       0.98      0.92      0.95        49</p>
-                          <p>&nbsp;</p>
-                          <p>Confusion matrix visualization saved as 'confusion_matrix.png'</p>
-                        </>
-                      ) : (
-                        <>
-                          <p>Cluster Evaluation:</p>
-                          <p>--------------------</p>
-                          <p>Number of clusters: 3</p>
-                          <p>Silhouette Score: 0.7532</p>
-                          <p>&nbsp;</p>
-                          <p>Cluster Distribution:</p>
-                          <p>Cluster 0: 350 samples</p>
-                          <p>Cluster 1: 420 samples</p> 
-                          <p>Cluster 2: 230 samples</p>
-                          <p>&nbsp;</p>
-                          <p>Clustering visualization saved as 'clusters.png'</p>
-                        </>
-                      )}
-                      <p>&nbsp;</p>
-                      <p>Feature Importance:</p>
-                      {datasetStats && datasetStats.columnNames.slice(0, 3).map((col, i) => (
-                        <p key={i}>{col}: {(Math.random() * 0.3 + 0.1).toFixed(4)}</p>
-                      ))}
-                      <p>&nbsp;</p>
-                      <p>Model saved as '{selectedAlgorithm.toLowerCase().replace(/\s+/g, '_')}_model.pkl'</p>
                     </div>
                   </CardContent>
                 </Card>
