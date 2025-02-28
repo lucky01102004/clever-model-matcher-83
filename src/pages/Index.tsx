@@ -17,6 +17,7 @@ const Index = () => {
     columnNames: string[];
     dataSample: Record<string, string>[];
   } | null>(null);
+  const [learningType, setLearningType] = useState<"supervised" | "unsupervised" | null>(null);
 
   const steps = [
     {
@@ -72,9 +73,29 @@ const Index = () => {
     setSelectedFile(file);
     if (file && stats) {
       setDatasetStats(stats);
+      
+      // Determine if the dataset is likely for supervised or unsupervised learning
+      // Check if the last column has categorical values (for classification) or numeric values (for regression)
+      // If the last column doesn't seem like a target variable, suggest unsupervised learning
+      const lastColumnName = stats.columnNames[stats.columnNames.length - 1];
+      const lastColumnValues = stats.dataSample.map(row => row[lastColumnName]);
+      
+      // Check if last column has numeric values only
+      const isNumeric = lastColumnValues.every(value => !isNaN(Number(value)));
+      
+      // Check if last column has a small number of unique values (suggesting classification)
+      const uniqueValues = new Set(lastColumnValues);
+      
+      if (uniqueValues.size < stats.rows * 0.2 || isNumeric) {
+        setLearningType("supervised");
+      } else {
+        setLearningType("unsupervised");
+      }
+      
       toast.success("File analyzed successfully");
     } else {
       setDatasetStats(null);
+      setLearningType(null);
     }
   };
 
@@ -140,7 +161,7 @@ const Index = () => {
     return ((missingCells / totalCells) * 100).toFixed(1);
   };
 
-  const getRecommendedAlgorithms = (
+  const getSupervisedAlgorithms = (
     dataTypes: {
       numerical: number;
       categorical: number;
@@ -156,60 +177,70 @@ const Index = () => {
         score: 0,
         description: "Best for handling both numerical and categorical data. Excellent for avoiding overfitting.",
         useCases: "Classification, Regression",
+        type: "supervised"
       },
       {
         name: "XGBoost",
         score: 0,
         description: "Powerful gradient boosting algorithm. Handles missing values well.",
         useCases: "Classification, Regression, Ranking",
+        type: "supervised"
       },
       {
         name: "Neural Network",
         score: 0,
         description: "Deep learning model for complex patterns. Good with large datasets.",
         useCases: "Classification, Regression, Pattern Recognition",
+        type: "supervised"
       },
       {
         name: "LightGBM",
         score: 0,
         description: "Fast gradient boosting framework. Efficient with large datasets.",
         useCases: "Classification, Regression",
+        type: "supervised"
       },
       {
         name: "CatBoost",
         score: 0,
         description: "Handles categorical features automatically. Fast training.",
         useCases: "Classification, Regression",
+        type: "supervised"
       },
       {
         name: "SVM",
         score: 0,
         description: "Effective for high-dimensional spaces. Good with clear margins.",
         useCases: "Classification, Regression",
+        type: "supervised"
       },
       {
         name: "K-Nearest Neighbors",
         score: 0,
         description: "Simple and interpretable. Good for small to medium datasets.",
         useCases: "Classification, Regression",
+        type: "supervised"
       },
       {
         name: "Logistic Regression",
         score: 0,
         description: "Simple and interpretable. Good baseline model.",
         useCases: "Binary Classification",
+        type: "supervised"
       },
       {
         name: "Decision Tree",
         score: 0,
         description: "Highly interpretable. Good for feature importance.",
         useCases: "Classification, Regression",
+        type: "supervised"
       },
       {
         name: "AdaBoost",
         score: 0,
         description: "Combines weak learners into strong ones. Good with weak patterns.",
         useCases: "Classification, Regression",
+        type: "supervised"
       }
     ];
 
@@ -254,7 +285,153 @@ const Index = () => {
     .sort((a, b) => b.score - a.score);
   };
 
+  const getUnsupervisedAlgorithms = (
+    dataTypes: {
+      numerical: number;
+      categorical: number;
+      datetime: number;
+      boolean: number;
+    },
+    totalRows: number
+  ) => {
+    const algorithms = [
+      {
+        name: "K-Means Clustering",
+        score: 0,
+        description: "Divides data into k clusters based on similarity. Good for well-separated clusters.",
+        useCases: "Customer Segmentation, Image Compression",
+        type: "unsupervised"
+      },
+      {
+        name: "DBSCAN",
+        score: 0,
+        description: "Density-based clustering that handles noise well. Can find arbitrarily shaped clusters.",
+        useCases: "Anomaly Detection, Spatial Clustering",
+        type: "unsupervised"
+      },
+      {
+        name: "Hierarchical Clustering",
+        score: 0,
+        description: "Creates a tree of clusters. Good for exploring hierarchical relationships.",
+        useCases: "Taxonomy Creation, Document Clustering",
+        type: "unsupervised"
+      },
+      {
+        name: "PCA",
+        score: 0,
+        description: "Dimensionality reduction technique that maximizes variance.",
+        useCases: "Feature Extraction, Data Visualization",
+        type: "unsupervised"
+      },
+      {
+        name: "t-SNE",
+        score: 0,
+        description: "Non-linear dimensionality reduction for visualization. Preserves local structures.",
+        useCases: "High-dimensional Data Visualization",
+        type: "unsupervised"
+      },
+      {
+        name: "UMAP",
+        score: 0,
+        description: "Modern dimensionality reduction technique. Faster than t-SNE with better global structure.",
+        useCases: "Visualization, General Dimensionality Reduction",
+        type: "unsupervised"
+      },
+      {
+        name: "Isolation Forest",
+        score: 0,
+        description: "Efficiently detects outliers using random forests.",
+        useCases: "Anomaly Detection, Fraud Detection",
+        type: "unsupervised"
+      },
+      {
+        name: "Gaussian Mixture Models",
+        score: 0,
+        description: "Probabilistic model for representing normally distributed clusters.",
+        useCases: "Soft Clustering, Density Estimation",
+        type: "unsupervised"
+      }
+    ];
+
+    return algorithms.map(algo => {
+      let score = 0;
+      
+      // PCA, t-SNE and UMAP work well with high-dimensional numerical data
+      if (dataTypes.numerical > 5) {
+        if (["PCA", "t-SNE", "UMAP"].includes(algo.name)) {
+          score += 25;
+        }
+      }
+
+      // K-Means and GMM prefer numerical data
+      if (dataTypes.numerical > dataTypes.categorical) {
+        if (["K-Means Clustering", "Gaussian Mixture Models"].includes(algo.name)) {
+          score += 20;
+        }
+      }
+
+      // DBSCAN and Hierarchical can work better with mixed data types
+      if (dataTypes.categorical > 0) {
+        if (["DBSCAN", "Hierarchical Clustering"].includes(algo.name)) {
+          score += 15;
+        }
+      }
+
+      // For large datasets
+      if (totalRows > 10000) {
+        if (["K-Means Clustering", "DBSCAN", "Isolation Forest"].includes(algo.name)) {
+          score += 15;
+        } else if (["Hierarchical Clustering", "t-SNE"].includes(algo.name)) {
+          score -= 10; // These can be slow on large datasets
+        }
+      } 
+      // For smaller datasets
+      else if (totalRows < 1000) {
+        if (["Hierarchical Clustering", "t-SNE", "UMAP"].includes(algo.name)) {
+          score += 15;
+        }
+      }
+
+      return {
+        ...algo,
+        score: Math.min(100, Math.max(0, score)),
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+  };
+
+  const getRecommendedAlgorithms = (
+    dataTypes: {
+      numerical: number;
+      categorical: number;
+      datetime: number;
+      boolean: number;
+    },
+    totalRows: number,
+    missingValuesPercentage: number
+  ) => {
+    if (learningType === "supervised") {
+      return getSupervisedAlgorithms(dataTypes, totalRows, missingValuesPercentage);
+    } else {
+      return getUnsupervisedAlgorithms(dataTypes, totalRows);
+    }
+  };
+
   const generateAlgorithmCode = (algorithm: string, fileName: string) => {
+    // Determine if the selected algorithm is supervised or unsupervised
+    const isSupervisedAlgorithm = [
+      "Random Forest", "XGBoost", "Neural Network", "LightGBM", "CatBoost", 
+      "SVM", "K-Nearest Neighbors", "Logistic Regression", "Decision Tree", "AdaBoost"
+    ].includes(algorithm);
+
+    if (isSupervisedAlgorithm) {
+      return generateSupervisedCode(algorithm, fileName);
+    } else {
+      return generateUnsupervisedCode(algorithm, fileName);
+    }
+  };
+
+  const generateSupervisedCode = (algorithm: string, fileName: string) => {
     const imports = {
       "Random Forest": "from sklearn.ensemble import RandomForestClassifier",
       "XGBoost": "import xgboost as xgb\nfrom xgboost import XGBClassifier",
@@ -335,7 +512,9 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.metrics import confusion_matrix, classification_report, mean_squared_error
+from sklearn.metrics import confusion_matrix, classification_report, mean_squared_error, r2_score
+import matplotlib.pyplot as plt
+import seaborn as sns
 ${imports[algorithm as keyof typeof imports]}
 
 # Load the dataset
@@ -357,9 +536,12 @@ df = df.fillna(df.mean() if df.select_dtypes(include=[np.number]).columns.any() 
 categorical_cols = df.select_dtypes(include=['object', 'category']).columns
 numerical_cols = df.select_dtypes(include=[np.number]).columns
 
-# Assume the target column is the last one - adjust as needed
+# Use the last column as the target variable
 target_column = df.columns[-1]
 feature_columns = [col for col in df.columns if col != target_column]
+
+print(f"\\nTarget variable: {target_column}")
+print(f"Features: {feature_columns}")
 
 # Prepare features and target
 X = df[feature_columns]
@@ -406,8 +588,12 @@ y_pred = pipeline.predict(X_test)
 print("\\nModel Evaluation:")
 print("--------------------")
 
-try:
-    # Classification metrics (will work if target is categorical)
+# Check if the problem is classification or regression
+unique_values = len(np.unique(y))
+is_classification = unique_values < 10  # Heuristic: if fewer than 10 unique values, likely classification
+
+if is_classification:
+    # Classification metrics
     accuracy = accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred, average='weighted', zero_division=0)
     recall = recall_score(y_test, y_pred, average='weighted', zero_division=0)
@@ -419,13 +605,23 @@ try:
     print(f"F1 Score: {f1:.4f}")
     
     print("\\nConfusion Matrix:")
-    print(confusion_matrix(y_test, y_pred))
+    cm = confusion_matrix(y_test, y_pred)
+    print(cm)
+    
+    # Plot confusion matrix
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+    plt.xlabel('Predicted labels')
+    plt.ylabel('True labels')
+    plt.title('Confusion Matrix')
+    plt.savefig('confusion_matrix.png')
+    print("Confusion matrix visualization saved as 'confusion_matrix.png'")
     
     print("\\nClassification Report:")
     print(classification_report(y_test, y_pred, zero_division=0))
     
-except:
-    # Regression metrics (will work if target is numerical)
+else:
+    # Regression metrics
     mse = mean_squared_error(y_test, y_pred)
     rmse = np.sqrt(mse)
     r2 = r2_score(y_test, y_pred)
@@ -433,22 +629,46 @@ except:
     print(f"Mean Squared Error: {mse:.4f}")
     print(f"Root Mean Squared Error: {rmse:.4f}")
     print(f"R² Score: {r2:.4f}")
+    
+    # Plot actual vs predicted values
+    plt.figure(figsize=(10, 6))
+    plt.scatter(y_test, y_pred, alpha=0.5)
+    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
+    plt.xlabel('Actual values')
+    plt.ylabel('Predicted values')
+    plt.title('Actual vs Predicted Values')
+    plt.savefig('regression_results.png')
+    print("Regression results visualization saved as 'regression_results.png'")
 
 # Feature importance (for models that support it)
 try:
     if hasattr(pipeline['model'], 'feature_importances_'):
         importances = pipeline['model'].feature_importances_
-        feature_names = X.columns
         
-        # Get indices of features sorted by importance
-        indices = np.argsort(importances)[::-1]
+        # Get feature names after preprocessing
+        if hasattr(pipeline['preprocessor'], 'get_feature_names_out'):
+            feature_names = pipeline['preprocessor'].get_feature_names_out()
+        else:
+            feature_names = X.columns
+        
+        # Create DataFrame for feature importance
+        feature_importance = pd.DataFrame({
+            'Feature': feature_names,
+            'Importance': importances
+        }).sort_values('Importance', ascending=False)
         
         print("\\nFeature Importance:")
-        for i, idx in enumerate(indices):
-            if i < 10:  # Print top 10 features
-                print(f"{feature_names[idx]}: {importances[idx]:.4f}")
-except:
-    pass
+        print(feature_importance.head(10))
+        
+        # Plot feature importance
+        plt.figure(figsize=(12, 8))
+        sns.barplot(x='Importance', y='Feature', data=feature_importance.head(20))
+        plt.title('Feature Importance')
+        plt.tight_layout()
+        plt.savefig('feature_importance.png')
+        print("Feature importance visualization saved as 'feature_importance.png'")
+except Exception as e:
+    print(f"Could not compute feature importance: {e}")
 
 print("\\nPredictions (First 5):")
 print(y_pred[:5])
@@ -456,6 +676,513 @@ print(y_pred[:5])
 # Save the model
 import joblib
 joblib.dump(pipeline, '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.pkl')
+print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.pkl'")
+`;
+  };
+
+  const generateUnsupervisedCode = (algorithm: string, fileName: string) => {
+    let imports = "";
+    let modelCode = "";
+    let evaluationCode = "";
+    
+    switch (algorithm) {
+      case "K-Means Clustering":
+        imports = "from sklearn.cluster import KMeans";
+        modelCode = `
+# Initialize and fit K-Means model
+model = KMeans(n_clusters=3, random_state=42)
+clusters = model.fit_predict(X_scaled)
+
+# Add cluster labels to original data
+df_clustered = df.copy()
+df_clustered['Cluster'] = clusters`;
+        evaluationCode = `
+# Evaluate clusters with Silhouette Score
+from sklearn.metrics import silhouette_score
+silhouette_avg = silhouette_score(X_scaled, clusters)
+print(f"Silhouette Score: {silhouette_avg:.4f}")
+
+# Plot clusters (for 2D visualization, use PCA if more than 2 dimensions)
+if X_scaled.shape[1] > 2:
+    from sklearn.decomposition import PCA
+    pca = PCA(n_components=2)
+    X_pca = pca.fit_transform(X_scaled)
+    
+    plt.figure(figsize=(10, 8))
+    plt.scatter(X_pca[:, 0], X_pca[:, 1], c=clusters, cmap='viridis', alpha=0.8)
+    plt.scatter(model.cluster_centers_[:, 0], model.cluster_centers_[:, 1], 
+                c='red', marker='x', s=100)
+    plt.title('K-Means Clustering with PCA Visualization')
+else:
+    plt.figure(figsize=(10, 8))
+    plt.scatter(X_scaled[:, 0], X_scaled[:, 1], c=clusters, cmap='viridis', alpha=0.8)
+    plt.scatter(model.cluster_centers_[:, 0], model.cluster_centers_[:, 1], 
+                c='red', marker='x', s=100)
+    plt.title('K-Means Clustering')
+
+plt.savefig('kmeans_clusters.png')
+print("Clustering visualization saved as 'kmeans_clusters.png'")
+
+# Plot cluster distribution
+plt.figure(figsize=(8, 6))
+sns.countplot(x='Cluster', data=df_clustered)
+plt.title('Cluster Distribution')
+plt.savefig('cluster_distribution.png')
+print("Cluster distribution saved as 'cluster_distribution.png'")
+
+# Analyze clusters
+print("\\nCluster Summary:")
+for cluster in range(model.n_clusters):
+    print(f"\\nCluster {cluster}:")
+    print(df_clustered[df_clustered['Cluster'] == cluster].describe())`;
+        break;
+        
+      case "DBSCAN":
+        imports = "from sklearn.cluster import DBSCAN";
+        modelCode = `
+# Initialize and fit DBSCAN model
+model = DBSCAN(eps=0.5, min_samples=5)
+clusters = model.fit_predict(X_scaled)
+
+# Add cluster labels to original data
+df_clustered = df.copy()
+df_clustered['Cluster'] = clusters`;
+        evaluationCode = `
+# Count number of clusters and noise points
+n_clusters = len(set(clusters)) - (1 if -1 in clusters else 0)
+n_noise = list(clusters).count(-1)
+print(f"Number of estimated clusters: {n_clusters}")
+print(f"Number of noise points: {n_noise}")
+
+# Plot clusters (for 2D visualization, use PCA if more than 2 dimensions)
+if X_scaled.shape[1] > 2:
+    from sklearn.decomposition import PCA
+    pca = PCA(n_components=2)
+    X_pca = pca.fit_transform(X_scaled)
+    
+    plt.figure(figsize=(10, 8))
+    # Black is used for noise points
+    unique_clusters = set(clusters)
+    colors = plt.cm.viridis(np.linspace(0, 1, len(unique_clusters)))
+    for cluster, col in zip(unique_clusters, colors):
+        if cluster == -1:
+            # Black used for noise
+            col = [0, 0, 0, 1]
+        plt.scatter(X_pca[clusters == cluster, 0], X_pca[clusters == cluster, 1],
+                   c=[col], marker='o', s=50, alpha=0.8)
+    plt.title('DBSCAN Clustering with PCA Visualization')
+else:
+    plt.figure(figsize=(10, 8))
+    plt.scatter(X_scaled[:, 0], X_scaled[:, 1], c=clusters, cmap='viridis', alpha=0.8)
+    plt.title('DBSCAN Clustering')
+
+plt.savefig('dbscan_clusters.png')
+print("Clustering visualization saved as 'dbscan_clusters.png'")
+
+# Plot cluster distribution
+cluster_labels = ['Noise' if c == -1 else f'Cluster {c}' for c in clusters]
+cluster_df = pd.DataFrame({'Cluster': cluster_labels})
+
+plt.figure(figsize=(10, 6))
+sns.countplot(x='Cluster', data=cluster_df)
+plt.title('Cluster Distribution')
+plt.xticks(rotation=45)
+plt.savefig('dbscan_distribution.png')
+print("Cluster distribution saved as 'dbscan_distribution.png'")`;
+        break;
+        
+      case "Hierarchical Clustering":
+        imports = "from sklearn.cluster import AgglomerativeClustering\nfrom scipy.cluster.hierarchy import dendrogram, linkage";
+        modelCode = `
+# Initialize and fit Hierarchical Clustering model
+model = AgglomerativeClustering(n_clusters=3)
+clusters = model.fit_predict(X_scaled)
+
+# Add cluster labels to original data
+df_clustered = df.copy()
+df_clustered['Cluster'] = clusters`;
+        evaluationCode = `
+# Create linkage matrix for dendrogram
+# Using only a sample for large datasets to make it more legible
+max_samples = min(1000, X_scaled.shape[0])
+indices = np.random.choice(range(X_scaled.shape[0]), max_samples, replace=False)
+X_sample = X_scaled[indices]
+
+# Create linkage matrix
+Z = linkage(X_sample, method='ward')
+
+# Plot dendrogram
+plt.figure(figsize=(12, 8))
+dendrogram(Z)
+plt.title('Hierarchical Clustering Dendrogram')
+plt.xlabel('Sample index')
+plt.ylabel('Distance')
+plt.savefig('dendrogram.png')
+print("Dendrogram visualization saved as 'dendrogram.png'")
+
+# Plot clusters (for 2D visualization, use PCA if more than 2 dimensions)
+if X_scaled.shape[1] > 2:
+    from sklearn.decomposition import PCA
+    pca = PCA(n_components=2)
+    X_pca = pca.fit_transform(X_scaled)
+    
+    plt.figure(figsize=(10, 8))
+    plt.scatter(X_pca[:, 0], X_pca[:, 1], c=clusters, cmap='viridis', alpha=0.8)
+    plt.title('Hierarchical Clustering with PCA Visualization')
+else:
+    plt.figure(figsize=(10, 8))
+    plt.scatter(X_scaled[:, 0], X_scaled[:, 1], c=clusters, cmap='viridis', alpha=0.8)
+    plt.title('Hierarchical Clustering')
+
+plt.savefig('hierarchical_clusters.png')
+print("Clustering visualization saved as 'hierarchical_clusters.png'")
+
+# Plot cluster distribution
+plt.figure(figsize=(8, 6))
+sns.countplot(x='Cluster', data=df_clustered)
+plt.title('Cluster Distribution')
+plt.savefig('hierarchical_distribution.png')
+print("Cluster distribution saved as 'hierarchical_distribution.png'")
+
+# Analyze clusters
+print("\\nCluster Summary:")
+for cluster in range(model.n_clusters):
+    print(f"\\nCluster {cluster}:")
+    print(df_clustered[df_clustered['Cluster'] == cluster].describe())`;
+        break;
+        
+      case "PCA":
+        imports = "from sklearn.decomposition import PCA";
+        modelCode = `
+# Initialize and fit PCA model
+n_components = min(X_scaled.shape[1], 5)  # Get top 5 components (or fewer if not enough features)
+model = PCA(n_components=n_components)
+X_pca = model.fit_transform(X_scaled)
+
+# Create a DataFrame with the principal components
+component_names = [f'PC{i+1}' for i in range(n_components)]
+df_pca = pd.DataFrame(X_pca, columns=component_names)
+
+# Add original indexes 
+df_pca['index'] = df.index
+
+# Merge with original data if needed
+df_with_pca = pd.concat([df.reset_index(drop=True), df_pca.drop('index', axis=1).reset_index(drop=True)], axis=1)`;
+        evaluationCode = `
+# Explained variance
+explained_variance = model.explained_variance_ratio_
+cumulative_variance = np.cumsum(explained_variance)
+
+print("\\nExplained Variance by Components:")
+for i, var in enumerate(explained_variance):
+    print(f"PC{i+1}: {var:.4f} ({cumulative_variance[i]:.4f} cumulative)")
+
+# Plot explained variance
+plt.figure(figsize=(10, 6))
+plt.bar(component_names, explained_variance)
+plt.plot(component_names, cumulative_variance, 'ro-')
+plt.axhline(y=0.8, color='r', linestyle='-')
+plt.title('Explained Variance by Principal Components')
+plt.ylabel('Explained Variance Ratio')
+plt.xlabel('Principal Components')
+plt.savefig('pca_variance.png')
+print("PCA variance visualization saved as 'pca_variance.png'")
+
+# Plot first two principal components
+plt.figure(figsize=(10, 8))
+plt.scatter(X_pca[:, 0], X_pca[:, 1], alpha=0.5)
+plt.title('First Two Principal Components')
+plt.xlabel('PC1')
+plt.ylabel('PC2')
+plt.savefig('pca_scatter.png')
+print("PCA scatter plot saved as 'pca_scatter.png'")
+
+# Feature loadings for the first few components
+if hasattr(model, 'components_') and X.columns is not None:
+    loadings = pd.DataFrame(
+        model.components_.T, 
+        columns=component_names, 
+        index=X.columns
+    )
+    print("\\nFeature Loadings:")
+    print(loadings)
+    
+    # Plot feature loadings
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(loadings, annot=True, cmap='coolwarm', linewidths=0.5)
+    plt.title('PCA Feature Loadings')
+    plt.savefig('pca_loadings.png')
+    print("PCA loadings visualization saved as 'pca_loadings.png'")`;
+        break;
+        
+      case "t-SNE":
+        imports = "from sklearn.manifold import TSNE";
+        modelCode = `
+# Initialize and fit t-SNE model
+model = TSNE(n_components=2, random_state=42, perplexity=min(30, X_scaled.shape[0]-1))
+X_tsne = model.fit_transform(X_scaled)
+
+# Create a DataFrame with the t-SNE components
+df_tsne = pd.DataFrame(X_tsne, columns=['t-SNE 1', 't-SNE 2'])
+
+# Add original indexes
+df_tsne['index'] = df.index
+
+# Merge with original data if needed
+df_with_tsne = pd.concat([df.reset_index(drop=True), df_tsne.drop('index', axis=1).reset_index(drop=True)], axis=1)`;
+        evaluationCode = `
+# Plot t-SNE results
+plt.figure(figsize=(10, 8))
+plt.scatter(X_tsne[:, 0], X_tsne[:, 1], alpha=0.5)
+plt.title('t-SNE Visualization')
+plt.xlabel('t-SNE 1')
+plt.ylabel('t-SNE 2')
+plt.savefig('tsne_scatter.png')
+print("t-SNE visualization saved as 'tsne_scatter.png'")
+
+# Try to identify clusters using K-means on t-SNE result
+from sklearn.cluster import KMeans
+kmeans = KMeans(n_clusters=3, random_state=42)
+clusters = kmeans.fit_predict(X_tsne)
+
+plt.figure(figsize=(10, 8))
+plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c=clusters, cmap='viridis', alpha=0.8)
+plt.title('t-SNE with K-Means Clustering')
+plt.savefig('tsne_clusters.png')
+print("t-SNE with clustering saved as 'tsne_clusters.png'")
+
+# Add cluster labels to original data
+df_clustered = df.copy()
+df_clustered['Cluster'] = clusters
+
+# Plot cluster distribution
+plt.figure(figsize=(8, 6))
+sns.countplot(x='Cluster', data=df_clustered)
+plt.title('Cluster Distribution')
+plt.savefig('tsne_cluster_distribution.png')
+print("Cluster distribution saved as 'tsne_cluster_distribution.png'")`;
+        break;
+        
+      case "UMAP":
+        imports = "import umap";
+        modelCode = `
+# Initialize and fit UMAP model
+model = umap.UMAP(n_components=2, random_state=42)
+X_umap = model.fit_transform(X_scaled)
+
+# Create a DataFrame with the UMAP components
+df_umap = pd.DataFrame(X_umap, columns=['UMAP 1', 'UMAP 2'])
+
+# Add original indexes
+df_umap['index'] = df.index
+
+# Merge with original data if needed
+df_with_umap = pd.concat([df.reset_index(drop=True), df_umap.drop('index', axis=1).reset_index(drop=True)], axis=1)`;
+        evaluationCode = `
+# Plot UMAP results
+plt.figure(figsize=(10, 8))
+plt.scatter(X_umap[:, 0], X_umap[:, 1], alpha=0.5)
+plt.title('UMAP Visualization')
+plt.xlabel('UMAP 1')
+plt.ylabel('UMAP 2')
+plt.savefig('umap_scatter.png')
+print("UMAP visualization saved as 'umap_scatter.png'")
+
+# Try to identify clusters using K-means on UMAP result
+from sklearn.cluster import KMeans
+kmeans = KMeans(n_clusters=3, random_state=42)
+clusters = kmeans.fit_predict(X_umap)
+
+plt.figure(figsize=(10, 8))
+plt.scatter(X_umap[:, 0], X_umap[:, 1], c=clusters, cmap='viridis', alpha=0.8)
+plt.title('UMAP with K-Means Clustering')
+plt.savefig('umap_clusters.png')
+print("UMAP with clustering saved as 'umap_clusters.png'")
+
+# Add cluster labels to original data
+df_clustered = df.copy()
+df_clustered['Cluster'] = clusters
+
+# Plot cluster distribution
+plt.figure(figsize=(8, 6))
+sns.countplot(x='Cluster', data=df_clustered)
+plt.title('Cluster Distribution')
+plt.savefig('umap_cluster_distribution.png')
+print("Cluster distribution saved as 'umap_cluster_distribution.png'")`;
+        break;
+        
+      case "Isolation Forest":
+        imports = "from sklearn.ensemble import IsolationForest";
+        modelCode = `
+# Initialize and fit Isolation Forest model
+model = IsolationForest(contamination=0.1, random_state=42)
+outliers = model.fit_predict(X_scaled)
+
+# Convert predictions: -1 for outliers, 1 for inliers
+outliers_binary = np.where(outliers == -1, 1, 0)  # 1 for outlier, 0 for normal
+
+# Add outlier information to original data
+df_with_outliers = df.copy()
+df_with_outliers['is_outlier'] = outliers_binary`;
+        evaluationCode = `
+# Count outliers
+n_outliers = sum(outliers_binary)
+print(f"\\nNumber of detected outliers: {n_outliers} ({n_outliers/len(outliers_binary):.2%} of data)")
+
+# Plot outliers in 2D (using PCA if more than 2 dimensions)
+if X_scaled.shape[1] > 2:
+    from sklearn.decomposition import PCA
+    pca = PCA(n_components=2)
+    X_pca = pca.fit_transform(X_scaled)
+    
+    plt.figure(figsize=(10, 8))
+    plt.scatter(X_pca[:, 0], X_pca[:, 1], c=outliers_binary, cmap='coolwarm', alpha=0.8)
+    plt.colorbar(label='Outlier')
+    plt.title('Outlier Detection with Isolation Forest (PCA visualization)')
+else:
+    plt.figure(figsize=(10, 8))
+    plt.scatter(X_scaled[:, 0], X_scaled[:, 1], c=outliers_binary, cmap='coolwarm', alpha=0.8)
+    plt.colorbar(label='Outlier')
+    plt.title('Outlier Detection with Isolation Forest')
+
+plt.savefig('isolation_forest_outliers.png')
+print("Outlier detection visualization saved as 'isolation_forest_outliers.png'")
+
+# Feature importance for outliers (calculate mean difference between outliers and inliers)
+outlier_importance = pd.DataFrame()
+outlier_importance['Feature'] = X.columns
+outlier_importance['Importance'] = [
+    abs(X.iloc[outliers_binary == 1, i].mean() - X.iloc[outliers_binary == 0, i].mean())
+    for i in range(X.shape[1])
+]
+outlier_importance = outlier_importance.sort_values('Importance', ascending=False)
+
+print("\\nFeature Importance for Outliers:")
+print(outlier_importance.head(10))
+
+# Plot feature importance
+plt.figure(figsize=(12, 8))
+sns.barplot(x='Importance', y='Feature', data=outlier_importance.head(20))
+plt.title('Feature Importance for Outlier Detection')
+plt.tight_layout()
+plt.savefig('outlier_feature_importance.png')
+print("Feature importance visualization saved as 'outlier_feature_importance.png'")`;
+        break;
+        
+      case "Gaussian Mixture Models":
+        imports = "from sklearn.mixture import GaussianMixture";
+        modelCode = `
+# Initialize and fit Gaussian Mixture Model
+model = GaussianMixture(n_components=3, random_state=42)
+clusters = model.fit_predict(X_scaled)
+
+# Add cluster labels to original data
+df_clustered = df.copy()
+df_clustered['Cluster'] = clusters`;
+        evaluationCode = `
+# Get model BIC and AIC
+bic = model.bic(X_scaled)
+aic = model.aic(X_scaled)
+print(f"\\nBIC: {bic}")
+print(f"AIC: {aic}")
+
+# Get cluster probabilities
+probs = model.predict_proba(X_scaled)
+prob_df = pd.DataFrame(probs, columns=[f'Prob_Cluster_{i}' for i in range(model.n_components)])
+df_with_probs = pd.concat([df_clustered, prob_df], axis=1)
+
+# Plot clusters (for 2D visualization, use PCA if more than 2 dimensions)
+if X_scaled.shape[1] > 2:
+    from sklearn.decomposition import PCA
+    pca = PCA(n_components=2)
+    X_pca = pca.fit_transform(X_scaled)
+    
+    plt.figure(figsize=(10, 8))
+    plt.scatter(X_pca[:, 0], X_pca[:, 1], c=clusters, cmap='viridis', alpha=0.8)
+    plt.title('Gaussian Mixture Model with PCA Visualization')
+else:
+    plt.figure(figsize=(10, 8))
+    plt.scatter(X_scaled[:, 0], X_scaled[:, 1], c=clusters, cmap='viridis', alpha=0.8)
+    plt.title('Gaussian Mixture Model Clustering')
+
+plt.savefig('gmm_clusters.png')
+print("GMM clustering visualization saved as 'gmm_clusters.png'")
+
+# Plot cluster distribution
+plt.figure(figsize=(8, 6))
+sns.countplot(x='Cluster', data=df_clustered)
+plt.title('Cluster Distribution')
+plt.savefig('gmm_distribution.png')
+print("Cluster distribution saved as 'gmm_distribution.png'")
+
+# Visualize uncertainty (entropy of probabilities)
+from scipy.stats import entropy
+cluster_entropy = [entropy(probs[i]) for i in range(len(probs))]
+df_clustered['Uncertainty'] = cluster_entropy
+
+# Plot uncertainty 
+plt.figure(figsize=(10, 6))
+if X_scaled.shape[1] > 2:
+    plt.scatter(X_pca[:, 0], X_pca[:, 1], c=cluster_entropy, cmap='viridis', alpha=0.8)
+else:
+    plt.scatter(X_scaled[:, 0], X_scaled[:, 1], c=cluster_entropy, cmap='viridis', alpha=0.8)
+plt.colorbar(label='Uncertainty (Entropy)')
+plt.title('Clustering Uncertainty')
+plt.savefig('gmm_uncertainty.png')
+print("Uncertainty visualization saved as 'gmm_uncertainty.png'")
+
+# Analyze clusters
+print("\\nCluster Summary:")
+for cluster in range(model.n_components):
+    print(f"\\nCluster {cluster}:")
+    print(df_clustered[df_clustered['Cluster'] == cluster].describe())`;
+        break;
+        
+      default:
+        return "# Algorithm not recognized or not implemented yet.";
+    }
+    
+    return `import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import StandardScaler
+${imports}
+
+# Load the dataset
+df = pd.read_csv('${fileName || "dataset.csv"}')
+
+# Display basic information
+print("Dataset Shape:", df.shape)
+print("\\nFirst 5 rows:")
+print(df.head())
+print("\\nData Types:")
+print(df.dtypes)
+print("\\nSummary Statistics:")
+print(df.describe())
+
+# Handle missing values
+df = df.fillna(df.mean() if df.select_dtypes(include=[np.number]).columns.any() else df.mode().iloc[0])
+
+# Extract features (for unsupervised learning, we'll use all columns)
+X = df.select_dtypes(include=['number'])  # Use only numeric columns
+
+# Print selected features
+print("\\nSelected Features:", X.columns.tolist())
+
+# Standardize the data
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Apply unsupervised learning
+${modelCode}
+
+# Evaluate results
+${evaluationCode}
+
+# Save the model
+import joblib
+joblib.dump(model, '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.pkl')
 print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.pkl'")
 `;
   };
@@ -508,9 +1235,14 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
                     {datasetStats.columnNames.map((column, index) => (
                       <span
                         key={index}
-                        className="px-3 py-1 bg-white rounded-full text-sm text-primary-600"
+                        className={`px-3 py-1 rounded-full text-sm ${
+                          index === datasetStats.columnNames.length - 1
+                            ? "bg-accent text-white font-semibold"
+                            : "bg-white text-primary-600"
+                        }`}
                       >
                         {column}
+                        {index === datasetStats.columnNames.length - 1 && " (Target)"}
                       </span>
                     ))}
                   </div>
@@ -526,9 +1258,14 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
                         {datasetStats.columnNames.map((column, index) => (
                           <th
                             key={index}
-                            className="px-4 py-2 text-left text-sm font-medium text-primary-900"
+                            className={`px-4 py-2 text-left text-sm font-medium ${
+                              index === datasetStats.columnNames.length - 1
+                                ? "bg-accent text-white"
+                                : "text-primary-900"
+                            }`}
                           >
                             {column}
+                            {index === datasetStats.columnNames.length - 1 && " (Target)"}
                           </th>
                         ))}
                       </tr>
@@ -539,7 +1276,11 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
                           {datasetStats.columnNames.map((column, colIndex) => (
                             <td
                               key={colIndex}
-                              className="px-4 py-2 text-sm text-primary-600"
+                              className={`px-4 py-2 text-sm ${
+                                colIndex === datasetStats.columnNames.length - 1
+                                  ? "text-accent font-medium"
+                                  : "text-primary-600"
+                              }`}
                             >
                               {String(row[column])}
                             </td>
@@ -592,6 +1333,32 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
                     </div>
                   </CardContent>
                 </Card>
+                
+                <Card className="bg-primary-50/30 border-accent">
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-medium mb-2">Learning Type Recommendation</h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-primary-800 font-medium">
+                          {learningType === "supervised" 
+                            ? "Supervised Learning" 
+                            : "Unsupervised Learning"}
+                        </p>
+                        <p className="text-sm text-primary-600 mt-1">
+                          {learningType === "supervised"
+                            ? `Based on your data, we recommend supervised learning models. The last column '${
+                                datasetStats.columnNames[datasetStats.columnNames.length - 1]
+                              }' will be used as the target variable.`
+                            : "Based on your data, we recommend unsupervised learning models that can discover patterns without labeled outputs."}
+                        </p>
+                      </div>
+                      <div className="bg-accent/10 p-3 rounded-full">
+                        <Settings className="h-6 w-6 text-accent" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card>
                     <CardContent className="p-6">
@@ -653,6 +1420,22 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
                   Choose any algorithm that best suits your needs. Match percentages are recommendations based on your data.
                 </p>
               </div>
+
+              <Card className="mb-6 bg-primary-50/30 border-accent">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-medium mb-2">Learning Type</h3>
+                  <div className="flex items-center">
+                    <div className="bg-accent/10 p-2 rounded-full mr-3">
+                      <Settings className="h-5 w-5 text-accent" />
+                    </div>
+                    <p className="text-primary-800">
+                      {learningType === "supervised" 
+                        ? `Supervised Learning (Target: ${datasetStats.columnNames[datasetStats.columnNames.length - 1]})` 
+                        : "Unsupervised Learning"}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
 
               <div className="space-y-6">
                 <div>
@@ -751,14 +1534,33 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
               <>
                 <Card className="mb-6">
                   <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                       <div>
                         <h3 className="text-lg font-medium">Selected Algorithm</h3>
                         <p className="text-accent font-semibold">{selectedAlgorithm}</p>
+                        <p className="text-sm text-primary-600 mt-1">
+                          {learningType === "supervised" 
+                            ? "Supervised Learning" 
+                            : "Unsupervised Learning"}
+                        </p>
                       </div>
                       <div>
                         <h3 className="text-lg font-medium">Dataset</h3>
                         <p className="text-primary-600">{selectedFile?.name || "dataset.csv"}</p>
+                        <p className="text-sm text-primary-600 mt-1">
+                          {datasetStats && (
+                            <>
+                              {`${datasetStats.rows} rows × ${datasetStats.columns} columns`}
+                              {learningType === "supervised" && (
+                                <>
+                                  <br />
+                                  <span className="font-medium">Target: </span>
+                                  {datasetStats.columnNames[datasetStats.columnNames.length - 1]}
+                                </>
+                              )}
+                            </>
+                          )}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -797,23 +1599,49 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
                   <CardContent className="p-6">
                     <h3 className="text-lg font-medium mb-4">Expected Output Preview</h3>
                     <div className="bg-black text-green-400 p-4 rounded-lg overflow-x-auto font-mono text-sm">
-                      <p>Dataset Shape: (1000, 10)</p>
+                      <p>Dataset Shape: {datasetStats ? `(${datasetStats.rows}, ${datasetStats.columns})` : "(1000, 10)"}</p>
                       <p>&nbsp;</p>
                       <p>First 5 rows:</p>
                       <p>[sample data preview would appear here]</p>
                       <p>&nbsp;</p>
-                      <p>Model Evaluation:</p>
-                      <p>--------------------</p>
-                      <p>Accuracy: 0.8756</p>
-                      <p>Precision: 0.8821</p>
-                      <p>Recall: 0.8756</p>
-                      <p>F1 Score: 0.8783</p>
-                      <p>&nbsp;</p>
-                      <p>Confusion Matrix:</p>
-                      <p>[confusion matrix would appear here]</p>
-                      <p>&nbsp;</p>
-                      <p>Classification Report:</p>
-                      <p>[detailed classification metrics would appear here]</p>
+                      {learningType === "supervised" ? (
+                        <>
+                          <p>Model Evaluation:</p>
+                          <p>--------------------</p>
+                          <p>Accuracy: 0.8756</p>
+                          <p>Precision: 0.8821</p>
+                          <p>Recall: 0.8756</p>
+                          <p>F1 Score: 0.8783</p>
+                          <p>&nbsp;</p>
+                          <p>Confusion Matrix:</p>
+                          <p>[[45  2  0]</p>
+                          <p> [ 3 50  1]</p>
+                          <p> [ 0  4 45]]</p>
+                          <p>&nbsp;</p>
+                          <p>Classification Report:</p>
+                          <p>              precision    recall  f1-score   support</p>
+                          <p>&nbsp;</p>
+                          <p>     class 0       0.94      0.96      0.95        47</p>
+                          <p>     class 1       0.89      0.93      0.91        54</p>
+                          <p>     class 2       0.98      0.92      0.95        49</p>
+                          <p>&nbsp;</p>
+                          <p>Confusion matrix visualization saved as 'confusion_matrix.png'</p>
+                        </>
+                      ) : (
+                        <>
+                          <p>Cluster Evaluation:</p>
+                          <p>--------------------</p>
+                          <p>Number of clusters: 3</p>
+                          <p>Silhouette Score: 0.7532</p>
+                          <p>&nbsp;</p>
+                          <p>Cluster Distribution:</p>
+                          <p>Cluster 0: 350 samples</p>
+                          <p>Cluster 1: 420 samples</p> 
+                          <p>Cluster 2: 230 samples</p>
+                          <p>&nbsp;</p>
+                          <p>Clustering visualization saved as 'clusters.png'</p>
+                        </>
+                      )}
                       <p>&nbsp;</p>
                       <p>Feature Importance:</p>
                       {datasetStats && datasetStats.columnNames.slice(0, 3).map((col, i) => (
