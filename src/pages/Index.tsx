@@ -18,6 +18,7 @@ const Index = () => {
     dataSample: Record<string, string>[];
   } | null>(null);
   const [learningType, setLearningType] = useState<"supervised" | "unsupervised" | null>(null);
+  const [autoDetectLearningType, setAutoDetectLearningType] = useState(true);
 
   const steps = [
     {
@@ -48,6 +49,11 @@ const Index = () => {
       return;
     }
 
+    if (step === 2 && !learningType) {
+      toast.error("Please select a learning type before proceeding");
+      return;
+    }
+
     if (step === 3 && !selectedAlgorithm) {
       toast.error("Please select an algorithm before proceeding");
       return;
@@ -74,22 +80,22 @@ const Index = () => {
     if (file && stats) {
       setDatasetStats(stats);
       
-      // Determine if the dataset is likely for supervised or unsupervised learning
-      // Check if the last column has categorical values (for classification) or numeric values (for regression)
-      // If the last column doesn't seem like a target variable, suggest unsupervised learning
-      const lastColumnName = stats.columnNames[stats.columnNames.length - 1];
-      const lastColumnValues = stats.dataSample.map(row => row[lastColumnName]);
-      
-      // Check if last column has numeric values only
-      const isNumeric = lastColumnValues.every(value => !isNaN(Number(value)));
-      
-      // Check if last column has a small number of unique values (suggesting classification)
-      const uniqueValues = new Set(lastColumnValues);
-      
-      if (uniqueValues.size < stats.rows * 0.2 || isNumeric) {
-        setLearningType("supervised");
-      } else {
-        setLearningType("unsupervised");
+      if (autoDetectLearningType) {
+        // Determine if the dataset is likely for supervised or unsupervised learning
+        const lastColumnName = stats.columnNames[stats.columnNames.length - 1];
+        const lastColumnValues = stats.dataSample.map(row => row[lastColumnName]);
+        
+        // Check if last column has numeric values only
+        const isNumeric = lastColumnValues.every(value => !isNaN(Number(value)));
+        
+        // Check if last column has a small number of unique values (suggesting classification)
+        const uniqueValues = new Set(lastColumnValues);
+        
+        if (uniqueValues.size < stats.rows * 0.2 || isNumeric) {
+          setLearningType("supervised");
+        } else {
+          setLearningType("unsupervised");
+        }
       }
       
       toast.success("File analyzed successfully");
@@ -97,6 +103,12 @@ const Index = () => {
       setDatasetStats(null);
       setLearningType(null);
     }
+  };
+
+  const handleLearningTypeSelect = (type: "supervised" | "unsupervised") => {
+    setLearningType(type);
+    setAutoDetectLearningType(false);
+    toast.success(`Selected ${type} learning`);
   };
 
   const handleAlgorithmSelect = (algorithmName: string) => {
@@ -1319,7 +1331,7 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
                   Analyzing your dataset to understand its characteristics
                 </p>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
@@ -1334,28 +1346,69 @@ print("\\nModel saved as '${algorithm.toLowerCase().replace(/\s+/g, '_')}_model.
                   </CardContent>
                 </Card>
                 
-                <Card className="bg-primary-50/30 border-accent">
+                <Card className="bg-primary-50/10">
                   <CardContent className="p-6">
-                    <h3 className="text-lg font-medium mb-2">Learning Type Recommendation</h3>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-primary-800 font-medium">
-                          {learningType === "supervised" 
-                            ? "Supervised Learning" 
-                            : "Unsupervised Learning"}
-                        </p>
-                        <p className="text-sm text-primary-600 mt-1">
-                          {learningType === "supervised"
-                            ? `Based on your data, we recommend supervised learning models. The last column '${
-                                datasetStats.columnNames[datasetStats.columnNames.length - 1]
-                              }' will be used as the target variable.`
-                            : "Based on your data, we recommend unsupervised learning models that can discover patterns without labeled outputs."}
-                        </p>
-                      </div>
-                      <div className="bg-accent/10 p-3 rounded-full">
-                        <Settings className="h-6 w-6 text-accent" />
-                      </div>
+                    <h3 className="text-xl font-medium mb-6">Choose Learning Type</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card 
+                        className={`border-2 cursor-pointer transition-all duration-200 ${
+                          learningType === "supervised" && !autoDetectLearningType
+                            ? "border-accent bg-accent/5"
+                            : "border-primary-200 hover:border-accent/50"
+                        }`}
+                        onClick={() => handleLearningTypeSelect("supervised")}
+                      >
+                        <CardContent className="p-6">
+                          <h3 className="text-lg font-medium mb-2">Supervised Learning</h3>
+                          <p className="text-sm text-primary-600 mb-4">
+                            Best for prediction tasks where you have labeled data with a target variable.
+                          </p>
+                          <p className="text-xs text-primary-500">
+                            Target column will be: <span className="font-semibold text-accent">{datasetStats.columnNames[datasetStats.columnNames.length - 1]}</span>
+                          </p>
+                          <div className="mt-4 text-xs">
+                            <span className="bg-primary-100 text-primary-800 px-2 py-1 rounded">
+                              Classification, Regression
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card 
+                        className={`border-2 cursor-pointer transition-all duration-200 ${
+                          learningType === "unsupervised" && !autoDetectLearningType
+                            ? "border-accent bg-accent/5"
+                            : "border-primary-200 hover:border-accent/50"
+                        }`}
+                        onClick={() => handleLearningTypeSelect("unsupervised")}
+                      >
+                        <CardContent className="p-6">
+                          <h3 className="text-lg font-medium mb-2">Unsupervised Learning</h3>
+                          <p className="text-sm text-primary-600 mb-4">
+                            Best for discovering patterns and structure in unlabeled data.
+                          </p>
+                          <p className="text-xs text-primary-500">
+                            All columns will be used as features
+                          </p>
+                          <div className="mt-4 text-xs">
+                            <span className="bg-primary-100 text-primary-800 px-2 py-1 rounded">
+                              Clustering, Dimensionality Reduction
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
+                    
+                    {autoDetectLearningType && learningType && (
+                      <div className="mt-4 p-3 bg-accent/10 rounded-lg">
+                        <p className="text-sm text-primary-800">
+                          <span className="font-semibold">Auto-detected:</span> Based on your dataset, we recommend {" "}
+                          <span className="font-semibold">{learningType === "supervised" ? "Supervised" : "Unsupervised"}</span> learning.
+                          You can change this selection by clicking on an option above.
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
                 
