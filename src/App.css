@@ -60,3 +60,13 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Ensure all module buttons (including code generation) have the same size */
+button.module-card {
+  width: 100%;
+  height: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+}
+
