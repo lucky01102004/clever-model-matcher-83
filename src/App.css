@@ -42,9 +42,9 @@
   color: #888;
 }
 
-/* Dark mode overrides */
-.dark .read-the-docs {
-  color: #aaa;
+/* Light mode overrides */
+.read-the-docs {
+  color: #555;
 }
 
 /* Module grid layout */

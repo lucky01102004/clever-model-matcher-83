@@ -6,16 +6,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import { useEffect } from "react";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Add dark mode to document on mount
-  useEffect(() => {
-    document.documentElement.classList.add('dark');
-  }, []);
-
+  // Light mode is now the default, no need to add classes
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
