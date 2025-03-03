@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
@@ -76,4 +77,67 @@ const CardFooter = React.forwardRef<
 ))
 CardFooter.displayName = "CardFooter"
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
+// Module card components with equal sizing
+const ModuleCard = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "module-card",
+      className
+    )}
+    {...props}
+  />
+))
+ModuleCard.displayName = "ModuleCard"
+
+const ModuleCardHeader = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("module-card-header", className)}
+    {...props}
+  />
+))
+ModuleCardHeader.displayName = "ModuleCardHeader"
+
+const ModuleCardContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("module-card-content", className)}
+    {...props}
+  />
+))
+ModuleCardContent.displayName = "ModuleCardContent"
+
+const ModuleCardFooter = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("module-card-footer", className)}
+    {...props}
+  />
+))
+ModuleCardFooter.displayName = "ModuleCardFooter"
+
+export { 
+  Card, 
+  CardHeader, 
+  CardFooter, 
+  CardTitle, 
+  CardDescription, 
+  CardContent,
+  ModuleCard,
+  ModuleCardHeader,
+  ModuleCardContent,
+  ModuleCardFooter
+}
