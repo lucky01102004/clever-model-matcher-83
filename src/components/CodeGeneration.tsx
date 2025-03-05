@@ -8,6 +8,7 @@ import { FileUpload } from "./FileUpload";
 import { generateCode, suggestAlgorithms } from "@/services/codeGenerationService";
 import { Loader2, Code, Lightbulb } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
 
 const CodeGeneration = () => {
   const [task, setTask] = useState<string>("");
