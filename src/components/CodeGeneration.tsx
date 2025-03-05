@@ -1,14 +1,15 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { FileUpload } from "./FileUpload";
-import { generateCode, suggestAlgorithms } from "@/services/codeGenerationService";
+import { generateCode, suggestAlgorithms, isApiKeySet } from "@/services/codeGenerationService";
 import { Loader2, Code, Lightbulb } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import ApiKeyManager from "./ApiKeyManager";
 
 const CodeGeneration = () => {
   const [task, setTask] = useState<string>("");
@@ -24,6 +25,19 @@ const CodeGeneration = () => {
   } | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<string>("generate");
+  const [hasApiKey, setHasApiKey] = useState<boolean>(false);
+
+  useEffect(() => {
+    setHasApiKey(isApiKeySet());
+    
+    // Check for API key changes (from other components)
+    const checkApiKey = () => {
+      setHasApiKey(isApiKeySet());
+    };
+    
+    window.addEventListener('storage', checkApiKey);
+    return () => window.removeEventListener('storage', checkApiKey);
+  }, []);
 
   const handleFileSelect = (file: File | null, stats?: {
     rows: number;
@@ -72,6 +86,9 @@ const CodeGeneration = () => {
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
+      {/* API Key Management */}
+      <ApiKeyManager />
+      
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl font-bold">Python Code Generator</CardTitle>
@@ -103,7 +120,7 @@ const CodeGeneration = () => {
           <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
             <Button
               onClick={handleSuggestAlgorithms}
-              disabled={!fileStats || !task.trim() || isSuggesting || isGenerating}
+              disabled={!fileStats || !task.trim() || isSuggesting || isGenerating || !hasApiKey}
               className="flex-1"
               variant="outline"
             >
@@ -122,7 +139,7 @@ const CodeGeneration = () => {
             
             <Button
               onClick={handleGenerate}
-              disabled={!fileStats || !task.trim() || isGenerating || isSuggesting}
+              disabled={!fileStats || !task.trim() || isGenerating || isSuggesting || !hasApiKey}
               className="flex-1"
             >
               {isGenerating ? (

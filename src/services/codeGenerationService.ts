@@ -13,11 +13,35 @@ interface CodeGenerationRequest {
   task: string;
 }
 
-const GEMINI_API_KEY = "AIzaSyC4dOG17Id7Gq80zUqaF-JOeq3crzqUFZw";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
+
+// Get API key from localStorage or return empty string
+export const getApiKey = (): string => {
+  return localStorage.getItem("gemini-api-key") || "";
+};
+
+// Save API key to localStorage
+export const saveApiKey = (apiKey: string): void => {
+  localStorage.setItem("gemini-api-key", apiKey);
+};
+
+// Check if API key is set
+export const isApiKeySet = (): boolean => {
+  return !!getApiKey();
+};
 
 export const suggestAlgorithms = async (request: CodeGenerationRequest): Promise<string> => {
   const { dataDescription, task } = request;
+  const apiKey = getApiKey();
+  
+  if (!apiKey) {
+    toast({
+      title: "API Key Required",
+      description: "Please set your Gemini API key first.",
+      variant: "destructive",
+    });
+    return "API Key Required: Please set your Gemini API key to use this feature.";
+  }
   
   try {
     // Prepare the prompt for algorithm suggestions
@@ -40,7 +64,7 @@ Provide your response in a clear, concise format that can be easily displayed to
 `;
 
     // Call the Gemini API
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -96,6 +120,16 @@ Provide your response in a clear, concise format that can be easily displayed to
 
 export const generateCode = async (request: CodeGenerationRequest): Promise<string> => {
   const { dataDescription, task } = request;
+  const apiKey = getApiKey();
+  
+  if (!apiKey) {
+    toast({
+      title: "API Key Required",
+      description: "Please set your Gemini API key first.",
+      variant: "destructive",
+    });
+    return "# API Key Required: Please set your Gemini API key to use this feature.";
+  }
   
   try {
     // Prepare the prompt for the AI
@@ -112,7 +146,7 @@ Please generate Python code to accomplish this task. Use pandas for data manipul
 `;
 
     // Call the Gemini API
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
