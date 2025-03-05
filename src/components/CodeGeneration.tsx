@@ -5,13 +5,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { FileUpload } from "./FileUpload";
-import { generateCode } from "@/services/codeGenerationService";
-import { Loader2, Code } from "lucide-react";
+import { generateCode, suggestAlgorithms } from "@/services/codeGenerationService";
+import { Loader2, Code, Lightbulb } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const CodeGeneration = () => {
   const [task, setTask] = useState<string>("");
   const [generatedCode, setGeneratedCode] = useState<string>("");
+  const [algorithmSuggestions, setAlgorithmSuggestions] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [isSuggesting, setIsSuggesting] = useState<boolean>(false);
   const [fileStats, setFileStats] = useState<{
     rows: number;
     columns: number;
@@ -19,6 +22,7 @@ const CodeGeneration = () => {
     dataSample: Record<string, string>[];
   } | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("generate");
 
   const handleFileSelect = (file: File | null, stats?: {
     rows: number;
@@ -46,6 +50,22 @@ const CodeGeneration = () => {
       setGeneratedCode(code);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleSuggestAlgorithms = async () => {
+    if (!fileStats || !task.trim()) return;
+    
+    setIsSuggesting(true);
+    try {
+      const suggestions = await suggestAlgorithms({
+        dataDescription: fileStats,
+        task: task.trim()
+      });
+      setAlgorithmSuggestions(suggestions);
+      setActiveTab("suggest");
+    } finally {
+      setIsSuggesting(false);
     }
   };
 
@@ -78,43 +98,91 @@ const CodeGeneration = () => {
             />
           </div>
 
-          {/* Generate Button */}
-          <Button
-            onClick={handleGenerate}
-            disabled={!fileStats || !task.trim() || isGenerating}
-            className="w-full"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Code className="h-4 w-4 mr-2" />
-                Generate Python Code
-              </>
-            )}
-          </Button>
+          {/* Action Buttons */}
+          <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
+            <Button
+              onClick={handleSuggestAlgorithms}
+              disabled={!fileStats || !task.trim() || isSuggesting || isGenerating}
+              className="flex-1"
+              variant="outline"
+            >
+              {isSuggesting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Lightbulb className="h-4 w-4 mr-2" />
+                  Suggest Algorithms
+                </>
+              )}
+            </Button>
+            
+            <Button
+              onClick={handleGenerate}
+              disabled={!fileStats || !task.trim() || isGenerating || isSuggesting}
+              className="flex-1"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Code className="h-4 w-4 mr-2" />
+                  Generate Python Code
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Generated Code Output */}
-      {generatedCode && (
+      {/* Output Tabs */}
+      {(generatedCode || algorithmSuggestions) && (
         <Card>
           <CardHeader>
-            <CardTitle>Generated Python Code</CardTitle>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="suggest" disabled={!algorithmSuggestions}>
+                  Algorithm Suggestions
+                </TabsTrigger>
+                <TabsTrigger value="generate" disabled={!generatedCode}>
+                  Generated Code
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </CardHeader>
           <CardContent>
-            <pre className="bg-gray-100 p-4 rounded-md overflow-auto max-h-[500px] text-sm">
-              <code>{generatedCode}</code>
-            </pre>
+            <TabsContent value="suggest" className="mt-0">
+              {algorithmSuggestions && (
+                <div className="bg-gray-50 p-4 rounded-md prose max-w-none">
+                  <pre className="whitespace-pre-wrap" style={{ fontFamily: 'inherit' }}>
+                    {algorithmSuggestions}
+                  </pre>
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="generate" className="mt-0">
+              {generatedCode && (
+                <pre className="bg-gray-100 p-4 rounded-md overflow-auto max-h-[500px] text-sm">
+                  <code>{generatedCode}</code>
+                </pre>
+              )}
+            </TabsContent>
           </CardContent>
           <CardFooter>
             <Button
               variant="outline"
               onClick={() => {
-                navigator.clipboard.writeText(generatedCode);
+                const textToCopy = activeTab === "generate" ? generatedCode : algorithmSuggestions;
+                navigator.clipboard.writeText(textToCopy);
+                toast({
+                  title: "Copied to clipboard",
+                  description: activeTab === "generate" ? "Code copied to clipboard" : "Algorithm suggestions copied to clipboard",
+                });
               }}
             >
               Copy to Clipboard
