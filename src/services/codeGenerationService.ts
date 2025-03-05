@@ -1,5 +1,5 @@
 
-// This service handles code generation using the OpenAI API
+// This service handles code generation using the Gemini API
 
 import { toast } from "@/components/ui/use-toast";
 
@@ -12,6 +12,9 @@ interface CodeGenerationRequest {
   };
   task: string;
 }
+
+const GEMINI_API_KEY = "AIzaSyC4dOG17Id7Gq80zUqaF-JOeq3crzqUFZw";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
 
 export const generateCode = async (request: CodeGenerationRequest): Promise<string> => {
   const { dataDescription, task } = request;
@@ -30,80 +33,50 @@ Task: ${task}
 Please generate Python code to accomplish this task. Use pandas for data manipulation, matplotlib or seaborn for any visualizations, and scikit-learn for any machine learning tasks if needed.
 `;
 
-    // Free API for code generation (OpenAI-like)
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Call the Gemini API
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Remove the Authorization header to avoid 401 errors in the demo
-        // In a real application, you would include your API key here
-        // 'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
+        contents: [
           {
-            role: 'system',
-            content: 'You are a helpful data science assistant that generates Python code.'
-          },
-          {
-            role: 'user',
-            content: prompt
+            parts: [
+              {
+                text: prompt
+              }
+            ]
           }
         ],
-        temperature: 0.2,
-        max_tokens: 1000,
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 1000,
+        }
       }),
     });
 
-    // For demo purposes, we'll simulate a response since we can't make actual API calls
-    // In a real application, you would parse the actual response
-    const mockResponse = `
-\`\`\`python
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Gemini API error:", errorData);
+      throw new Error(`API request failed: ${response.status}`);
+    }
 
-# Load the dataset
-df = pd.read_csv('your_dataset.csv')
+    const data = await response.json();
+    
+    // Extract the generated text from the response
+    let generatedText = "";
+    
+    if (data.candidates && data.candidates.length > 0 && 
+        data.candidates[0].content && 
+        data.candidates[0].content.parts && 
+        data.candidates[0].content.parts.length > 0) {
+      generatedText = data.candidates[0].content.parts[0].text;
+    } else {
+      throw new Error("Unexpected API response format");
+    }
 
-# Display basic information
-print("Dataset Info:")
-print(f"Rows: {len(df)}")
-print(f"Columns: {df.columns.tolist()}")
-print("\\nFirst 5 rows:")
-print(df.head())
-
-# Summary statistics
-print("\\nSummary Statistics:")
-print(df.describe())
-
-# Visualize data
-plt.figure(figsize=(12, 6))
-for i, column in enumerate(df.select_dtypes(include=['number']).columns):
-    plt.subplot(2, 3, i+1)
-    sns.histplot(df[column], kde=True)
-    plt.title(f'Distribution of {column}')
-    if i >= 5:
-        break
-plt.tight_layout()
-plt.savefig('data_distribution.png')
-plt.show()
-
-# Correlation matrix for numeric columns
-numeric_df = df.select_dtypes(include=['number'])
-if not numeric_df.empty:
-    plt.figure(figsize=(10, 8))
-    correlation_matrix = numeric_df.corr()
-    sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
-    plt.title('Correlation Matrix')
-    plt.tight_layout()
-    plt.savefig('correlation_matrix.png')
-    plt.show()
-\`\`\`
-`;
-
-    return mockResponse;
+    return generatedText;
   } catch (error) {
     console.error('Error generating code:', error);
     toast({
@@ -114,4 +87,3 @@ if not numeric_df.empty:
     return "# Error generating code. Please try again.";
   }
 };
-

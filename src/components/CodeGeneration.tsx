@@ -1,16 +1,14 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { FileUpload } from "./FileUpload";
-import ApiKeyInput from "./ApiKeyInput";
 import { generateCode } from "@/services/codeGenerationService";
 import { Loader2, Code } from "lucide-react";
 
 const CodeGeneration = () => {
-  const [apiKey, setApiKey] = useState<string>("");
   const [task, setTask] = useState<string>("");
   const [generatedCode, setGeneratedCode] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -21,23 +19,6 @@ const CodeGeneration = () => {
     dataSample: Record<string, string>[];
   } | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  useEffect(() => {
-    // Load API key from localStorage
-    const storedApiKey = localStorage.getItem("openai_api_key");
-    if (storedApiKey) {
-      setApiKey(storedApiKey);
-    }
-  }, []);
-
-  const handleApiKeySave = (key: string) => {
-    setApiKey(key);
-    if (key) {
-      localStorage.setItem("openai_api_key", key);
-    } else {
-      localStorage.removeItem("openai_api_key");
-    }
-  };
 
   const handleFileSelect = (file: File | null, stats?: {
     rows: number;
@@ -78,21 +59,15 @@ const CodeGeneration = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* API Key Input */}
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold">1. Set API Key</h3>
-            <ApiKeyInput onApiKeySave={handleApiKeySave} isApiKeySet={!!apiKey} />
-          </div>
-
           {/* File Upload */}
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold">2. Upload Your Dataset</h3>
+            <h3 className="text-lg font-semibold">1. Upload Your Dataset</h3>
             <FileUpload onFileSelect={handleFileSelect} />
           </div>
 
           {/* Task Description */}
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold">3. Describe Your Task</h3>
+            <h3 className="text-lg font-semibold">2. Describe Your Task</h3>
             <Label htmlFor="task">What do you want to do with this data?</Label>
             <Textarea
               id="task"
@@ -106,7 +81,7 @@ const CodeGeneration = () => {
           {/* Generate Button */}
           <Button
             onClick={handleGenerate}
-            disabled={!apiKey || !fileStats || !task.trim() || isGenerating}
+            disabled={!fileStats || !task.trim() || isGenerating}
             className="w-full"
           >
             {isGenerating ? (
