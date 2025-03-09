@@ -18,6 +18,7 @@ const ModuleCard = ({ title, description, icon, to, className }: ModuleCardProps
       className={cn(
         "block p-6 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white",
         "transform hover:-translate-y-1 duration-200",
+        "hover:border-primary/50",
         className
       )}
     >

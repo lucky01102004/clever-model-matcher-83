@@ -13,6 +13,15 @@ interface FileUploadProps {
     columnNames: string[];
     dataSample: Record<string, string>[];
     suggestedTarget?: string;
+    statistics?: {
+      mean: Record<string, number>;
+      median: Record<string, number>;
+      mode: Record<string, any>;
+      stdDev: Record<string, number>;
+      nullCount: Record<string, number>;
+      correlationMatrix?: Record<string, Record<string, number>>;
+      classDistribution?: Record<string, number>;
+    }
   }) => void;
 }
 
@@ -64,6 +73,125 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
     return sortedColumns.length > 0 ? sortedColumns[0].column : columnNames[columnNames.length - 1];
   };
 
+  const calculateStatistics = (data: any[], columnNames: string[]) => {
+    const numericColumns = columnNames.filter(col => 
+      !isNaN(Number(data[0][col])) && data[0][col] !== null && data[0][col] !== ""
+    );
+    
+    const statistics = {
+      mean: {} as Record<string, number>,
+      median: {} as Record<string, number>,
+      mode: {} as Record<string, any>,
+      stdDev: {} as Record<string, number>,
+      nullCount: {} as Record<string, number>,
+      correlationMatrix: {} as Record<string, Record<string, number>>,
+      classDistribution: {} as Record<string, number>
+    };
+    
+    // Calculate stats for each column
+    columnNames.forEach(col => {
+      const values = data.map(row => row[col]);
+      const numericValues = values.filter(val => 
+        val !== null && val !== "" && !isNaN(Number(val))
+      ).map(val => Number(val));
+      
+      // Count nulls
+      statistics.nullCount[col] = values.filter(val => val === null || val === "").length;
+      
+      // For numeric columns, calculate other statistics
+      if (numericValues.length > 0) {
+        // Mean
+        statistics.mean[col] = numericValues.reduce((sum, val) => sum + val, 0) / numericValues.length;
+        
+        // Median
+        const sorted = [...numericValues].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        statistics.median[col] = sorted.length % 2 === 0 
+          ? (sorted[mid - 1] + sorted[mid]) / 2 
+          : sorted[mid];
+        
+        // Standard Deviation
+        const mean = statistics.mean[col];
+        const squareDiffs = numericValues.map(val => Math.pow(val - mean, 2));
+        statistics.stdDev[col] = Math.sqrt(
+          squareDiffs.reduce((sum, val) => sum + val, 0) / numericValues.length
+        );
+      }
+      
+      // Mode (for all columns)
+      const countMap: Record<string, number> = {};
+      values.forEach(val => {
+        const strVal = String(val);
+        countMap[strVal] = (countMap[strVal] || 0) + 1;
+      });
+      
+      let maxCount = 0;
+      let modes: string[] = [];
+      
+      Object.entries(countMap).forEach(([val, count]) => {
+        if (count > maxCount) {
+          maxCount = count;
+          modes = [val];
+        } else if (count === maxCount) {
+          modes.push(val);
+        }
+      });
+      
+      statistics.mode[col] = modes;
+    });
+    
+    // Calculate correlation matrix for numeric columns
+    if (numericColumns.length > 1) {
+      numericColumns.forEach(col1 => {
+        statistics.correlationMatrix[col1] = {};
+        
+        numericColumns.forEach(col2 => {
+          if (col1 === col2) {
+            statistics.correlationMatrix[col1][col2] = 1;
+            return;
+          }
+          
+          const values1 = data.map(row => Number(row[col1]));
+          const values2 = data.map(row => Number(row[col2]));
+          
+          const mean1 = statistics.mean[col1];
+          const mean2 = statistics.mean[col2];
+          
+          let numerator = 0;
+          let denominator1 = 0;
+          let denominator2 = 0;
+          
+          for (let i = 0; i < values1.length; i++) {
+            const diff1 = values1[i] - mean1;
+            const diff2 = values2[i] - mean2;
+            
+            numerator += diff1 * diff2;
+            denominator1 += diff1 * diff1;
+            denominator2 += diff2 * diff2;
+          }
+          
+          const correlation = numerator / (Math.sqrt(denominator1) * Math.sqrt(denominator2));
+          statistics.correlationMatrix[col1][col2] = isNaN(correlation) ? 0 : correlation;
+        });
+      });
+    }
+    
+    // Calculate class distribution for potential target columns
+    const suggestedTarget = detectPossibleTargetColumn(data, columnNames);
+    if (suggestedTarget) {
+      const targetValues = data.map(row => String(row[suggestedTarget]));
+      const distribution: Record<string, number> = {};
+      
+      targetValues.forEach(val => {
+        distribution[val] = (distribution[val] || 0) + 1;
+      });
+      
+      statistics.classDistribution = distribution;
+    }
+    
+    return statistics;
+  };
+
   const processExcelFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -81,13 +209,15 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
         
         const columnNames = Object.keys(jsonData[0] || {});
         const suggestedTarget = detectPossibleTargetColumn(jsonData, columnNames);
+        const statistics = calculateStatistics(jsonData, columnNames);
         
         const stats = {
           rows: jsonData.length,
           columns: columnNames.length,
           columnNames: columnNames,
           dataSample: jsonData.slice(0, 5) as Record<string, string>[],
-          suggestedTarget
+          suggestedTarget,
+          statistics
         };
         
         onFileSelect(file, stats);
@@ -117,13 +247,15 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
             
             const columnNames = Object.keys(results.data[0] || {});
             const suggestedTarget = detectPossibleTargetColumn(results.data, columnNames);
+            const statistics = calculateStatistics(results.data, columnNames);
             
             const stats = {
               rows: results.data.length,
               columns: columnNames.length,
               columnNames: columnNames,
               dataSample: results.data.slice(0, 5) as Record<string, string>[],
-              suggestedTarget
+              suggestedTarget,
+              statistics
             };
             
             onFileSelect(file, stats);
