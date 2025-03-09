@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Upload, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
 
 interface FileUploadProps {
   onFileSelect: (file: File | null, stats?: { 
@@ -11,7 +10,6 @@ interface FileUploadProps {
     columns: number;
     columnNames: string[];
     dataSample: Record<string, string>[];
-    targetColumn?: string;
   }) => void;
 }
 
@@ -29,84 +27,30 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
     setIsDragging(false);
   };
 
-  const detectTargetColumn = (data: any[]) => {
-    // Common names for target/class columns
-    const possibleTargetNames = ['target', 'class', 'label', 'outcome', 'result', 'y'];
-    
-    if (!data || data.length === 0) return undefined;
-    
-    const headers = Object.keys(data[0]);
-    
-    // First try to find exact matches in lowercase
-    for (const name of possibleTargetNames) {
-      const match = headers.find(h => h.toLowerCase() === name);
-      if (match) return match;
-    }
-    
-    // Then try to find columns containing these words
-    for (const name of possibleTargetNames) {
-      const match = headers.find(h => h.toLowerCase().includes(name));
-      if (match) return match;
-    }
-    
-    // If we can't find any matches, return the last column as a fallback
-    return headers[headers.length - 1];
-  };
-
   const analyzeFile = (file: File) => {
-    const fileType = file.name.split('.').pop()?.toLowerCase();
-    
-    if (fileType === 'csv') {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          Papa.parse(event.target.result as string, {
-            header: true,
-            dynamicTyping: true,
-            complete: (results) => {
-              const columnNames = Object.keys(results.data[0] || {});
-              const targetColumn = detectTargetColumn(results.data);
-              const stats = {
-                rows: results.data.length,
-                columns: columnNames.length,
-                columnNames: columnNames,
-                dataSample: results.data.slice(0, 5) as Record<string, string>[],
-                targetColumn
-              };
-              onFileSelect(file, stats);
-            },
-            error: (error) => {
-              console.error("Error parsing CSV:", error);
-            }
-          });
-        }
-      };
-      reader.readAsText(file);
-    } else if (fileType === 'xlsx' || fileType === 'xls') {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const data = new Uint8Array(event.target.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-          
-          if (jsonData.length > 0) {
-            const columnNames = Object.keys(jsonData[0] || {});
-            const targetColumn = detectTargetColumn(jsonData);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        Papa.parse(event.target.result as string, {
+          header: true,
+          dynamicTyping: true,
+          complete: (results) => {
+            const columnNames = Object.keys(results.data[0] || {});
             const stats = {
-              rows: jsonData.length,
+              rows: results.data.length,
               columns: columnNames.length,
               columnNames: columnNames,
-              dataSample: jsonData.slice(0, 5) as Record<string, string>[],
-              targetColumn
+              dataSample: results.data.slice(0, 5) as Record<string, string>[]
             };
             onFileSelect(file, stats);
+          },
+          error: (error) => {
+            console.error("Error parsing CSV:", error);
           }
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    }
+        });
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -129,9 +73,8 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
   };
 
   const isValidFile = (file: File) => {
-    const validTypes = ["text/csv", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
-    const fileExtension = file.name.split('.').pop()?.toLowerCase();
-    return validTypes.includes(file.type) || fileExtension === 'csv' || fileExtension === 'xlsx' || fileExtension === 'xls';
+    const validTypes = ["text/csv", "application/vnd.ms-excel"];
+    return validTypes.includes(file.type);
   };
 
   const removeFile = () => {
@@ -170,7 +113,7 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
               Drag and drop your file here
             </p>
             <p className="text-sm text-primary-600">
-              or click to browse (CSV and Excel files)
+              or click to browse (CSV files only)
             </p>
           </div>
         </div>
