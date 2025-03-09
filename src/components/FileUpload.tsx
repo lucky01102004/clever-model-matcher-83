@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Upload, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
 
 interface FileUploadProps {
   onFileSelect: (file: File | null, stats?: { 
@@ -29,14 +28,6 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
   };
 
   const analyzeFile = (file: File) => {
-    if (file.name.endsWith('.csv')) {
-      analyzeCSV(file);
-    } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-      analyzeExcel(file);
-    }
-  };
-
-  const analyzeCSV = (file: File) => {
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
@@ -62,34 +53,6 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
     reader.readAsText(file);
   };
 
-  const analyzeExcel = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        const data = new Uint8Array(event.target.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        
-        // Get first sheet
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        
-        // Convert to JSON
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-        
-        if (jsonData.length > 0) {
-          const columnNames = Object.keys(jsonData[0]);
-          const stats = {
-            rows: jsonData.length,
-            columns: columnNames.length,
-            columnNames: columnNames,
-            dataSample: jsonData.slice(0, 5) as Record<string, string>[]
-          };
-          onFileSelect(file, stats);
-        }
-      }
-    };
-    reader.readAsArrayBuffer(file);
-  };
-
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -110,15 +73,8 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
   };
 
   const isValidFile = (file: File) => {
-    const validTypes = [
-      "text/csv", 
-      "application/vnd.ms-excel", 
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    ];
-    return validTypes.includes(file.type) || 
-           file.name.endsWith('.csv') || 
-           file.name.endsWith('.xlsx') || 
-           file.name.endsWith('.xls');
+    const validTypes = ["text/csv", "application/vnd.ms-excel"];
+    return validTypes.includes(file.type);
   };
 
   const removeFile = () => {
@@ -157,7 +113,7 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
               Drag and drop your file here
             </p>
             <p className="text-sm text-primary-600">
-              or click to browse (CSV or Excel files)
+              or click to browse (CSV files only)
             </p>
           </div>
         </div>
