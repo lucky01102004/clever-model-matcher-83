@@ -7,11 +7,13 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import CodeGeneration from "./components/CodeGeneration";
+import UploadDataset from "./pages/UploadDataset";
+import DataAnalysis from "./pages/DataAnalysis";
+import AlgorithmSelection from "./pages/AlgorithmSelection";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Light mode is now the default, no need to add classes
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -20,6 +22,9 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/upload-dataset" element={<UploadDataset />} />
+            <Route path="/data-analysis" element={<DataAnalysis />} />
+            <Route path="/algorithm-selection" element={<AlgorithmSelection />} />
             <Route path="/code-generator" element={<CodeGeneration />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

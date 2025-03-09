@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Upload, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
+import { toast } from "sonner";
 
 interface FileUploadProps {
   onFileSelect: (file: File | null, stats?: { 
@@ -10,6 +12,7 @@ interface FileUploadProps {
     columns: number;
     columnNames: string[];
     dataSample: Record<string, string>[];
+    suggestedTarget?: string;
   }) => void;
 }
 
@@ -27,7 +30,79 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
     setIsDragging(false);
   };
 
-  const analyzeFile = (file: File) => {
+  const detectPossibleTargetColumn = (data: any[], columnNames: string[]) => {
+    // Common target column names
+    const targetKeywords = [
+      "target", "label", "class", "output", "result", "outcome", "dependent", 
+      "prediction", "category", "classification", "y", "status"
+    ];
+    
+    // Look for columns with target-like names
+    for (const keyword of targetKeywords) {
+      const matchingColumn = columnNames.find(col => 
+        col.toLowerCase().includes(keyword.toLowerCase())
+      );
+      if (matchingColumn) return matchingColumn;
+    }
+    
+    // If no matching name, check for binary/categorical columns with few unique values
+    const columnStats = columnNames.map(col => {
+      const values = data.map(row => row[col]);
+      const uniqueValues = new Set(values);
+      return { 
+        column: col, 
+        uniqueCount: uniqueValues.size,
+        numeric: !isNaN(Number(values[0]))
+      };
+    });
+    
+    // Sort to prioritize categorical columns with few unique values
+    const sortedColumns = columnStats
+      .filter(stat => stat.uniqueCount > 1 && stat.uniqueCount <= 10)
+      .sort((a, b) => a.uniqueCount - b.uniqueCount);
+    
+    return sortedColumns.length > 0 ? sortedColumns[0].column : columnNames[columnNames.length - 1];
+  };
+
+  const processExcelFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        if (jsonData.length === 0) {
+          toast.error("Excel file is empty or invalid format");
+          return;
+        }
+        
+        const columnNames = Object.keys(jsonData[0] || {});
+        const suggestedTarget = detectPossibleTargetColumn(jsonData, columnNames);
+        
+        const stats = {
+          rows: jsonData.length,
+          columns: columnNames.length,
+          columnNames: columnNames,
+          dataSample: jsonData.slice(0, 5) as Record<string, string>[],
+          suggestedTarget
+        };
+        
+        onFileSelect(file, stats);
+      } catch (error) {
+        console.error("Error processing Excel file:", error);
+        toast.error("Failed to process Excel file");
+      }
+    };
+    reader.onerror = () => {
+      toast.error("Error reading file");
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const processCsvFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
@@ -35,20 +110,33 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
           header: true,
           dynamicTyping: true,
           complete: (results) => {
+            if (results.data.length === 0 || !results.data[0]) {
+              toast.error("CSV file is empty or invalid format");
+              return;
+            }
+            
             const columnNames = Object.keys(results.data[0] || {});
+            const suggestedTarget = detectPossibleTargetColumn(results.data, columnNames);
+            
             const stats = {
               rows: results.data.length,
               columns: columnNames.length,
               columnNames: columnNames,
-              dataSample: results.data.slice(0, 5) as Record<string, string>[]
+              dataSample: results.data.slice(0, 5) as Record<string, string>[],
+              suggestedTarget
             };
+            
             onFileSelect(file, stats);
           },
           error: (error) => {
             console.error("Error parsing CSV:", error);
+            toast.error("Failed to process CSV file");
           }
         });
       }
+    };
+    reader.onerror = () => {
+      toast.error("Error reading file");
     };
     reader.readAsText(file);
   };
@@ -60,7 +148,9 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
     const droppedFile = e.dataTransfer.files[0];
     if (isValidFile(droppedFile)) {
       setFile(droppedFile);
-      analyzeFile(droppedFile);
+      processFile(droppedFile);
+    } else {
+      toast.error("Please upload only CSV or Excel files");
     }
   };
 
@@ -68,13 +158,26 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile && isValidFile(selectedFile)) {
       setFile(selectedFile);
-      analyzeFile(selectedFile);
+      processFile(selectedFile);
+    } else if (selectedFile) {
+      toast.error("Please upload only CSV or Excel files");
+    }
+  };
+
+  const processFile = (file: File) => {
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    
+    if (fileExtension === 'csv') {
+      processCsvFile(file);
+    } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+      processExcelFile(file);
     }
   };
 
   const isValidFile = (file: File) => {
-    const validTypes = ["text/csv", "application/vnd.ms-excel"];
-    return validTypes.includes(file.type);
+    const validTypes = ["text/csv", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    return validTypes.includes(file.type) || fileExtension === 'csv' || fileExtension === 'xlsx' || fileExtension === 'xls';
   };
 
   const removeFile = () => {
@@ -113,7 +216,7 @@ export const FileUpload = ({ onFileSelect }: FileUploadProps) => {
               Drag and drop your file here
             </p>
             <p className="text-sm text-primary-600">
-              or click to browse (CSV files only)
+              or click to browse (CSV or Excel files only)
             </p>
           </div>
         </div>
