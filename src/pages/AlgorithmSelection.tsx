@@ -535,10 +535,10 @@ const AlgorithmSelection = () => {
                         <SelectValue placeholder="Select from all algorithms" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="" disabled>Browse all algorithms</SelectItem>
+                        <SelectItem value="browse_header" disabled>Browse all algorithms</SelectItem>
                         {Object.entries(algorithmsByType).map(([type, algorithms]) => (
                           <React.Fragment key={type}>
-                            <SelectItem value="" disabled className="font-bold uppercase">
+                            <SelectItem value={`header_${type}`} disabled className="font-bold uppercase">
                               {type.replace('_', ' ')}
                             </SelectItem>
                             {algorithms.map(alg => (

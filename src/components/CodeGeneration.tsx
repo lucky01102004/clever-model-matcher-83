@@ -1,14 +1,14 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { FileUpload } from "./FileUpload";
-import { generateCode, suggestAlgorithms, isApiKeySet } from "@/services/codeGenerationService";
+import { generateCode, suggestAlgorithms } from "@/services/codeGenerationService";
 import { Loader2, Code, Lightbulb, ArrowLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import ApiKeyManager from "./ApiKeyManager";
 import { Link } from "react-router-dom";
 
 const CodeGeneration = () => {
@@ -26,12 +26,9 @@ const CodeGeneration = () => {
   } | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<string>("generate");
-  const [hasApiKey, setHasApiKey] = useState<boolean>(false);
   const [savedAlgorithmData, setSavedAlgorithmData] = useState<any>(null);
 
   useEffect(() => {
-    setHasApiKey(isApiKeySet());
-    
     // Load algorithm data from localStorage if available
     const storedData = localStorage.getItem('codeGenerationData');
     if (storedData) {
@@ -71,14 +68,6 @@ const CodeGeneration = () => {
         console.error("Error parsing stored algorithm data:", error);
       }
     }
-    
-    // Check for API key changes (from other components)
-    const checkApiKey = () => {
-      setHasApiKey(isApiKeySet());
-    };
-    
-    window.addEventListener('storage', checkApiKey);
-    return () => window.removeEventListener('storage', checkApiKey);
   }, []);
 
   const handleFileSelect = (file: File | null, stats?: {
@@ -153,9 +142,6 @@ const CodeGeneration = () => {
       <p className="text-gray-600 mb-8">Generate Python code for your data analysis and machine learning tasks</p>
       
       <div className="w-full max-w-4xl mx-auto space-y-8">
-        {/* API Key Management */}
-        <ApiKeyManager />
-        
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Python Code Generator</CardTitle>
@@ -214,7 +200,7 @@ const CodeGeneration = () => {
             <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
               <Button
                 onClick={handleSuggestAlgorithms}
-                disabled={!fileStats || !task.trim() || isSuggesting || isGenerating || !hasApiKey}
+                disabled={!fileStats || !task.trim() || isSuggesting || isGenerating}
                 className="flex-1"
                 variant="outline"
               >
@@ -233,7 +219,7 @@ const CodeGeneration = () => {
               
               <Button
                 onClick={handleGenerate}
-                disabled={!fileStats || !task.trim() || isGenerating || isSuggesting || !hasApiKey}
+                disabled={!fileStats || !task.trim() || isGenerating || isSuggesting}
                 className="flex-1"
               >
                 {isGenerating ? (
