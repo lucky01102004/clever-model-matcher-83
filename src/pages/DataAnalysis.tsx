@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Database, Upload, BarChart } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { FileUpload } from '@/components/FileUpload';
+import { ArrowLeft, BarChart, FileWarning } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import {
   ResponsiveContainer,
   LineChart,
@@ -22,6 +23,7 @@ import {
 } from 'recharts';
 
 const DataAnalysis = () => {
+  const navigate = useNavigate();
   const [fileStats, setFileStats] = useState<{
     rows: number;
     columns: number;
@@ -39,28 +41,19 @@ const DataAnalysis = () => {
     }
   } | null>(null);
   
-  const handleFileSelect = (_: File | null, stats?: {
-    rows: number;
-    columns: number;
-    columnNames: string[];
-    dataSample: Record<string, string>[];
-    suggestedTarget?: string;
-    statistics?: {
-      mean: Record<string, number>;
-      median: Record<string, number>;
-      mode: Record<string, any>;
-      stdDev: Record<string, number>;
-      nullCount: Record<string, number>;
-      correlationMatrix?: Record<string, Record<string, number>>;
-      classDistribution?: Record<string, number>;
+  useEffect(() => {
+    // Retrieve data from localStorage when component mounts
+    const savedData = localStorage.getItem('uploadedDataset');
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        setFileStats(parsedData);
+      } catch (error) {
+        console.error("Error parsing saved data:", error);
+        toast.error("Failed to load dataset. Please return to Upload Dataset page.");
+      }
     }
-  }) => {
-    if (stats) {
-      setFileStats(stats);
-    } else {
-      setFileStats(null);
-    }
-  };
+  }, []);
 
   const getDistributionData = () => {
     if (!fileStats?.statistics?.classDistribution) return [];
@@ -99,6 +92,10 @@ const DataAnalysis = () => {
   
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FF6B6B', '#6B88FF'];
 
+  const handleGoToUpload = () => {
+    navigate('/upload-dataset');
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-6">
@@ -112,15 +109,6 @@ const DataAnalysis = () => {
       <p className="text-gray-600 mb-8">Analyze your dataset and get insights</p>
       
       <div className="grid grid-cols-1 gap-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Upload a Dataset</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FileUpload onFileSelect={handleFileSelect} />
-          </CardContent>
-        </Card>
-        
         {fileStats ? (
           <>
             <Card>
@@ -340,11 +328,14 @@ const DataAnalysis = () => {
           <Card>
             <CardContent className="py-10">
               <div className="text-center">
-                <BarChart className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <h2 className="text-xl font-medium mb-2">Upload a dataset first</h2>
+                <FileWarning className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                <h2 className="text-xl font-medium mb-2">No dataset found</h2>
                 <p className="text-gray-500 mb-6">
-                  Upload a CSV or Excel file to start analyzing your data
+                  You need to upload a dataset before you can analyze it
                 </p>
+                <Button onClick={handleGoToUpload}>
+                  Go to Upload Dataset
+                </Button>
               </div>
             </CardContent>
           </Card>

@@ -1,13 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Database } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FileUpload } from '@/components/FileUpload';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 
 const UploadDataset = () => {
+  const navigate = useNavigate();
   const [fileStats, setFileStats] = useState<{
     rows: number;
     columns: number;
@@ -24,6 +25,19 @@ const UploadDataset = () => {
       classDistribution?: Record<string, number>;
     }
   } | null>(null);
+  
+  useEffect(() => {
+    // Check if we already have data in localStorage
+    const savedData = localStorage.getItem('uploadedDataset');
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        setFileStats(parsedData);
+      } catch (error) {
+        console.error("Error parsing saved data:", error);
+      }
+    }
+  }, []);
   
   const handleFileSelect = (_: File | null, stats?: {
     rows: number;
@@ -43,8 +57,20 @@ const UploadDataset = () => {
   }) => {
     if (stats) {
       setFileStats(stats);
+      // Save the data to localStorage for other modules to access
+      localStorage.setItem('uploadedDataset', JSON.stringify(stats));
+      toast.success("Dataset uploaded successfully");
     } else {
       setFileStats(null);
+      localStorage.removeItem('uploadedDataset');
+    }
+  };
+
+  const handleContinueToAnalysis = () => {
+    if (fileStats) {
+      navigate('/data-analysis');
+    } else {
+      toast.error("Please upload a dataset first");
     }
   };
 
@@ -133,12 +159,10 @@ const UploadDataset = () => {
                 </div>
                 
                 <div className="flex space-x-3">
-                  <Button asChild className="flex-1">
-                    <Link to="/data-analysis">
-                      Proceed to Analysis
-                    </Link>
+                  <Button className="flex-1" onClick={handleContinueToAnalysis}>
+                    Proceed to Analysis
                   </Button>
-                  <Button asChild className="flex-1" variant="outline">
+                  <Button className="flex-1" variant="outline" asChild>
                     <Link to="/algorithm-selection">
                       Skip to Algorithm Selection
                     </Link>

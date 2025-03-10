@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
-import { FileUpload } from '@/components/FileUpload';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Database, CheckCircle, AlertCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ArrowLeft, Database, CheckCircle, FileWarning } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -237,6 +235,7 @@ const algorithmsByType: Record<AlgorithmType, Algorithm[]> = {
 };
 
 const AlgorithmSelection = () => {
+  const navigate = useNavigate();
   const [fileStats, setFileStats] = useState<{
     rows: number;
     columns: number;
@@ -251,33 +250,28 @@ const AlgorithmSelection = () => {
   const [recommendedAlgorithms, setRecommendedAlgorithms] = useState<Algorithm[]>([]);
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<Algorithm | null>(null);
   
-  const handleFileSelect = (_: File | null, stats?: {
-    rows: number;
-    columns: number;
-    columnNames: string[];
-    dataSample: Record<string, string>[];
-    suggestedTarget?: string;
-    statistics?: any;
-  }) => {
-    if (stats) {
-      setFileStats(stats);
-      if (stats.suggestedTarget) {
-        setSelectedTarget(stats.suggestedTarget);
-        
-        // Try to determine dataset type
-        guessDatasetType(stats);
-      } else {
-        setSelectedTarget(null);
-        setDatasetType(null);
+  useEffect(() => {
+    // Retrieve data from localStorage when component mounts
+    const savedData = localStorage.getItem('uploadedDataset');
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        setFileStats(parsedData);
+        if (parsedData.suggestedTarget) {
+          setSelectedTarget(parsedData.suggestedTarget);
+          
+          // Try to determine dataset type
+          guessDatasetType(parsedData);
+        } else {
+          setSelectedTarget(null);
+          setDatasetType(null);
+        }
+      } catch (error) {
+        console.error("Error parsing saved data:", error);
+        toast.error("Failed to load dataset. Please return to Upload Dataset page.");
       }
-    } else {
-      setFileStats(null);
-      setSelectedTarget(null);
-      setDatasetType(null);
-      setRecommendedAlgorithms([]);
-      setSelectedAlgorithm(null);
     }
-  };
+  }, []);
   
   const guessDatasetType = (stats: any) => {
     if (!stats.suggestedTarget) return;
@@ -354,6 +348,10 @@ const AlgorithmSelection = () => {
     toast.success("Ready for code generation");
   };
 
+  const handleGoToUpload = () => {
+    navigate('/upload-dataset');
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-6">
@@ -367,15 +365,6 @@ const AlgorithmSelection = () => {
       <p className="text-gray-600 mb-8">Select the most suitable algorithm for your dataset</p>
       
       <div className="grid grid-cols-1 gap-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Upload Your Dataset</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FileUpload onFileSelect={handleFileSelect} />
-          </CardContent>
-        </Card>
-        
         {fileStats ? (
           <>
             <Card>
@@ -582,11 +571,14 @@ const AlgorithmSelection = () => {
           <Card>
             <CardContent className="py-10">
               <div className="text-center">
-                <Database className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <h2 className="text-xl font-medium mb-2">Upload a dataset first</h2>
+                <FileWarning className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                <h2 className="text-xl font-medium mb-2">No dataset found</h2>
                 <p className="text-gray-500 mb-6">
-                  Upload a CSV or Excel file to get algorithm recommendations
+                  You need to upload a dataset before selecting an algorithm
                 </p>
+                <Button onClick={handleGoToUpload}>
+                  Go to Upload Dataset
+                </Button>
               </div>
             </CardContent>
           </Card>
