@@ -254,22 +254,24 @@ const CodeGeneration = () => {
               </Tabs>
             </CardHeader>
             <CardContent>
-              <TabsContent value="suggest" className="mt-0">
-                {algorithmSuggestions && (
-                  <div className="bg-gray-50 p-4 rounded-md prose max-w-none">
-                    <pre className="whitespace-pre-wrap" style={{ fontFamily: 'inherit' }}>
-                      {algorithmSuggestions}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsContent value="suggest" className="mt-0">
+                  {algorithmSuggestions && (
+                    <div className="bg-gray-50 p-4 rounded-md prose max-w-none">
+                      <pre className="whitespace-pre-wrap" style={{ fontFamily: 'inherit' }}>
+                        {algorithmSuggestions}
+                      </pre>
+                    </div>
+                  )}
+                </TabsContent>
+                <TabsContent value="generate" className="mt-0">
+                  {generatedCode && (
+                    <pre className="bg-gray-100 p-4 rounded-md overflow-auto max-h-[500px] text-sm">
+                      <code>{generatedCode}</code>
                     </pre>
-                  </div>
-                )}
-              </TabsContent>
-              <TabsContent value="generate" className="mt-0">
-                {generatedCode && (
-                  <pre className="bg-gray-100 p-4 rounded-md overflow-auto max-h-[500px] text-sm">
-                    <code>{generatedCode}</code>
-                  </pre>
-                )}
-              </TabsContent>
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
             <CardFooter>
               <Button
