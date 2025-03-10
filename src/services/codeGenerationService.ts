@@ -56,6 +56,8 @@ For each suggestion, explain:
 2. What data preprocessing might be required
 3. Any potential limitations or considerations
 
+IMPORTANT: If the dataset includes classification tasks, identify the class labels in the dataset. If the class labels are strings, explain the importance of converting them into a one-hot encoded vector to ensure compatibility with machine learning algorithms.
+
 Provide your response in a clear, concise format that can be easily displayed to users.
 `;
 
@@ -134,7 +136,9 @@ ${JSON.stringify(dataDescription.dataSample, null, 2)}
 
 Task: ${task}
 
-Please generate Python code to accomplish this task. Use pandas for data manipulation, matplotlib or seaborn for any visualizations, and scikit-learn for any machine learning tasks if needed.
+IMPORTANT REQUIREMENT: Identify the class labels in the dataset. If the class labels are strings, convert them into a one-hot encoded vector to ensure compatibility with machine learning algorithms. The output should be structured and ready for model training.
+
+Please generate Python code to accomplish this task. Use pandas for data manipulation, matplotlib or seaborn for any visualizations, scikit-learn for any machine learning tasks, and ensure proper handling of categorical variables through one-hot encoding when needed.
 `;
 
     // Call the Gemini API
@@ -215,7 +219,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
@@ -235,24 +241,58 @@ print(df.isnull().sum())
 # Handle missing values (if any)
 df = df.fillna(df.mean())
 
+# Identify data types for each column
+print("\\nColumn Data Types:")
+print(df.dtypes)
+
 # Select features and target
 X = df[${JSON.stringify(featureColumns)}]
 y = df['${targetColumn}']
 
+# Check if target column has string/categorical values
+if y.dtype == 'object' or pd.api.types.is_categorical_dtype(y):
+    print("\\nTarget column '${targetColumn}' contains categorical data.")
+    print("\\nUnique classes in target:")
+    print(y.value_counts())
+    
+    # For classification tasks, encode the target variable if it's categorical
+    from sklearn.preprocessing import LabelEncoder
+    label_encoder = LabelEncoder()
+    y = label_encoder.fit_transform(y)
+    print("\\nEncoded target classes mapping:")
+    for i, class_name in enumerate(label_encoder.classes_):
+        print(f"{class_name} -> {i}")
+
+# Identify categorical and numerical columns in features
+categorical_features = X.select_dtypes(include=['object', 'category']).columns.tolist()
+numerical_features = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
+
+print(f"\\nCategorical features: {categorical_features}")
+print(f"Numerical features: {numerical_features}")
+
+# Create preprocessing pipeline
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), numerical_features),
+        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
+    ],
+    remainder='passthrough'
+)
+
 # Split the data
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Scale the features
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
+# Create a pipeline with preprocessing and model
+model = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
+])
 
 # Train the model
-model = RandomForestClassifier(n_estimators=100, random_state=42)
-model.fit(X_train_scaled, y_train)
+model.fit(X_train, y_train)
 
 # Make predictions
-y_pred = model.predict(X_test_scaled)
+y_pred = model.predict(X_test)
 
 # Evaluate the model
 print("\\nModel Accuracy:", accuracy_score(y_test, y_pred))
@@ -269,15 +309,27 @@ plt.title('Confusion Matrix')
 plt.show()
 
 # Feature importance
-feature_importance = pd.DataFrame({
-    'Feature': X.columns,
-    'Importance': model.feature_importances_
-})
-feature_importance = feature_importance.sort_values('Importance', ascending=False)
+# Extract feature names after one-hot encoding
+if hasattr(model['preprocessor'], 'transformers_'):
+    # Get column names after transformation
+    ohe = model['preprocessor'].named_transformers_['cat']
+    if categorical_features:
+        cat_feature_names = ohe.get_feature_names_out(categorical_features).tolist()
+    else:
+        cat_feature_names = []
+    feature_names = numerical_features + cat_feature_names
+else:
+    feature_names = X.columns.tolist()
 
+# Get feature importances from the model
+importances = model['classifier'].feature_importances_
+indices = np.argsort(importances)[::-1]
+
+# Plot feature importances
 plt.figure(figsize=(10, 6))
-sns.barplot(x='Importance', y='Feature', data=feature_importance)
-plt.title('Feature Importance')
+plt.title('Feature Importances')
+plt.bar(range(len(indices)), importances[indices])
+plt.xticks(range(len(indices)), [feature_names[i] for i in indices], rotation=90)
 plt.tight_layout()
 plt.show()
 `;
@@ -305,6 +357,26 @@ print(df.describe())
 # Check for missing values
 print("\\nMissing Values:")
 print(df.isnull().sum())
+
+# Identify data types for each column
+print("\\nColumn Data Types:")
+print(df.dtypes)
+
+# Identify categorical columns
+categorical_columns = df.select_dtypes(include=['object', 'category']).columns
+print("\\nCategorical Columns:", list(categorical_columns))
+
+# For categorical columns, check unique values
+for col in categorical_columns:
+    print(f"\\nUnique values in {col}:")
+    print(df[col].value_counts())
+    
+    # If this is a potential class label column with a reasonable number of unique values,
+    # demonstrate one-hot encoding
+    if df[col].nunique() < 10:
+        print(f"\\nOne-hot encoding example for {col}:")
+        one_hot = pd.get_dummies(df[col], prefix=col)
+        print(one_hot.head())
 
 # Correlation matrix
 plt.figure(figsize=(12, 8))
@@ -342,6 +414,20 @@ plt.show()
 sns.pairplot(df[numeric_columns[:5]])
 plt.suptitle('Pairplot of Key Features', y=1.02)
 plt.show()
+
+# If categorical columns exist, show their relationship with numeric data
+if len(categorical_columns) > 0 and len(numeric_columns) > 0:
+    # For each categorical column with a reasonable number of categories
+    for cat_col in categorical_columns:
+        if df[cat_col].nunique() < 8:  # Only for columns with a small number of categories
+            # Create box plots of numeric features grouped by the categorical feature
+            for num_col in numeric_columns[:3]:  # Limit to first 3 numeric columns
+                plt.figure(figsize=(10, 6))
+                sns.boxplot(x=cat_col, y=num_col, data=df)
+                plt.title(f'{num_col} by {cat_col}')
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                plt.show()
 `;
   } else {
     // For categorical data or other types
@@ -350,6 +436,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.preprocessing import OneHotEncoder
 
 # Load the dataset
 # (In your real application, replace this with the actual file path)
@@ -373,8 +460,11 @@ for column in df.columns:
 print("\\nMissing Values:")
 print(df.isnull().sum())
 
-# Analyzing categorical columns
+# Identify categorical columns
 categorical_columns = df.select_dtypes(include=['object']).columns
+print("\\nCategorical columns:", list(categorical_columns))
+
+# Analyzing categorical columns
 n_cols = 1
 n_rows = len(categorical_columns)
 plt.figure(figsize=(12, n_rows * 5))
@@ -389,6 +479,38 @@ for i, column in enumerate(categorical_columns):
     plt.tight_layout()
 
 plt.show()
+
+# Convert categorical variables to one-hot encoded vectors
+print("\\nOne-Hot Encoding Categorical Variables:")
+# Create a one-hot encoder instance
+encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+
+# Select categorical columns with low cardinality (fewer than 10 unique values)
+low_cardinality_cols = [col for col in categorical_columns if df[col].nunique() < 10]
+
+if low_cardinality_cols:
+    # Fit and transform the selected categorical columns
+    encoded_data = encoder.fit_transform(df[low_cardinality_cols])
+    
+    # Create a dataframe with the encoded variables
+    encoded_df = pd.DataFrame(
+        encoded_data,
+        columns=encoder.get_feature_names_out(low_cardinality_cols)
+    )
+    
+    # Display the first few rows of the encoded dataframe
+    print("\\nFirst 5 rows of one-hot encoded data:")
+    print(encoded_df.head())
+    
+    # Concatenate encoded columns with the original numeric columns
+    numeric_df = df.select_dtypes(include=['number'])
+    
+    if not numeric_df.empty:
+        final_df = pd.concat([numeric_df.reset_index(drop=True), encoded_df], axis=1)
+        print("\\nFinal dataframe with numeric and encoded categorical data:")
+        print(final_df.head())
+else:
+    print("No suitable categorical columns found for one-hot encoding demonstration.")
 
 # Frequency tables for categorical variables
 for column in categorical_columns:
@@ -432,6 +554,15 @@ const generateExampleSuggestions = (dataDescription: CodeGenerationRequest['data
     return `# Suggested Classification Algorithms
 
 Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.columns} columns, here are recommended classification algorithms:
+
+## Data Preprocessing - Handling Class Labels
+
+**IMPORTANT**: When working with class labels, always check if they are strings or categorical. If so, you must convert them into a one-hot encoded vector or numeric labels:
+
+- **One-hot encoding**: Converts categorical variables into a binary matrix where each category gets a binary column.
+- **Label encoding**: Maps each class to a unique integer.
+
+This preprocessing is essential for algorithm compatibility and optimal performance.
 
 ## 1. Random Forest Classifier
 - **Why it's appropriate**: Random Forest works well with mixed data types and handles non-linear relationships. It's robust against overfitting.
@@ -487,6 +618,13 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
 
 Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.columns} columns, here are recommended regression algorithms:
 
+## Data Preprocessing - Handling Categorical Variables
+
+**IMPORTANT**: If your dataset contains categorical features, you should convert them into one-hot encoded vectors to ensure compatibility with the regression algorithms:
+
+- **One-hot encoding**: Transforms categorical variables into binary vectors where each category gets its own binary column.
+- This preprocessing step is essential for incorporating categorical data in regression models.
+
 ## 1. Gradient Boosting Regressor
 - **Why it's appropriate**: Typically achieves high accuracy and can model complex non-linear relationships.
 - **Preprocessing needed**:
@@ -540,11 +678,19 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
 
 Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.columns} columns, here are recommended clustering algorithms:
 
+## Data Preprocessing - Handling Categorical Data
+
+**IMPORTANT**: When using clustering algorithms with categorical data, you must convert string categories into numeric representations:
+
+- **One-hot encoding**: Transforms categorical variables into binary vectors, creating separate dimensions for each category.
+- This preprocessing ensures that clustering algorithms can properly measure distances between points with categorical attributes.
+
 ## 1. K-Means Clustering
 - **Why it's appropriate**: Simple, fast, and works well when clusters are spherical and similar in size.
 - **Preprocessing needed**:
   - Feature scaling
   - Handle missing values
+  - One-hot encode categorical variables
   - Consider dimensionality reduction for high-dimensional data
 - **Limitations**:
   - Requires specifying the number of clusters in advance
@@ -555,6 +701,7 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
 - **Preprocessing needed**:
   - Feature scaling
   - Handle missing values
+  - One-hot encode categorical variables
 - **Limitations**:
   - Sensitive to parameter choices
   - May struggle with varying density clusters
@@ -564,6 +711,7 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
 - **Preprocessing needed**:
   - Feature scaling
   - Handle missing values
+  - One-hot encode categorical variables
 - **Limitations**:
   - Computationally expensive for large datasets
   - Results can be difficult to interpret with many data points
@@ -573,6 +721,7 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
 - **Preprocessing needed**:
   - Feature scaling
   - Handle missing values
+  - One-hot encode categorical variables
 - **Limitations**:
   - Requires specifying number of components
   - Sensitive to initialization
@@ -582,6 +731,7 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
 - **Preprocessing needed**:
   - Feature scaling
   - Handle missing values
+  - One-hot encode categorical variables
 - **Limitations**:
   - Computationally intensive for large datasets
   - Cannot revise previous steps
@@ -591,11 +741,19 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
 
 Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.columns} columns, here are recommended dimensionality reduction techniques:
 
+## Data Preprocessing - Handling Categorical Variables
+
+**IMPORTANT**: When applying dimensionality reduction to datasets with categorical features:
+
+- **One-hot encoding**: Convert categorical variables into binary vectors before applying dimensionality reduction techniques.
+- This ensures that categorical data is properly represented in the reduced dimensional space.
+
 ## 1. Principal Component Analysis (PCA)
 - **Why it's appropriate**: Fast, well-established method that preserves maximum variance.
 - **Preprocessing needed**:
   - Feature scaling
   - Handle missing values
+  - One-hot encode categorical variables
 - **Limitations**:
   - Only captures linear relationships
   - Resulting components may be difficult to interpret
@@ -605,6 +763,7 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
 - **Preprocessing needed**:
   - Feature scaling
   - Consider using PCA first for very high-dimensional data
+  - One-hot encode categorical variables
 - **Limitations**:
   - Computationally intensive for large datasets
   - Results can vary with different parameter settings
@@ -615,6 +774,7 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
 - **Preprocessing needed**:
   - Feature scaling
   - Handle missing values
+  - One-hot encode categorical variables
 - **Limitations**:
   - Complex algorithm with many parameters
   - Relatively new technique with less documentation
@@ -624,6 +784,7 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
 - **Preprocessing needed**:
   - Feature scaling
   - Handle missing values
+  - Encode class labels for the target variable
 - **Limitations**:
   - Requires class labels (supervised)
   - Assumes normally distributed data with equal covariance matrices
@@ -633,6 +794,7 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
 - **Preprocessing needed**:
   - Feature scaling
   - Handle missing values
+  - One-hot encode categorical variables
 - **Limitations**:
   - Requires more data and computational resources
   - Complex to implement and tune
@@ -642,6 +804,14 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
     return `# Suggested Approaches for Exploratory Data Analysis
 
 Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.columns} columns, here are recommended analytical approaches:
+
+## Data Preprocessing - Class Label Identification
+
+**IMPORTANT**: When analyzing datasets with categorical variables or potential class labels:
+
+- Identify which columns contain class labels or categories
+- For machine learning preparation, convert string class labels into one-hot encoded vectors
+- This ensures compatibility with visualization tools and machine learning algorithms
 
 ## 1. Statistical Analysis
 - **Why it's appropriate**: Provides baseline understanding of data distributions and relationships.
@@ -681,6 +851,7 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
 - **Preprocessing needed**:
   - Feature scaling
   - Handle missing values
+  - One-hot encode categorical variables
 
 ## 5. Time Series Analysis (if applicable)
 - **Why it's appropriate**: Reveals patterns over time if data has temporal components.
@@ -694,3 +865,4 @@ Based on your dataset with ${dataDescription.rows} rows and ${dataDescription.co
 `;
   }
 };
+
