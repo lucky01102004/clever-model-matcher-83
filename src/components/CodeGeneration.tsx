@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -292,10 +291,7 @@ const CodeGeneration = () => {
                 onClick={() => {
                   const textToCopy = activeTab === "generate" ? generatedCode : algorithmSuggestions;
                   navigator.clipboard.writeText(textToCopy);
-                  toast({
-                    title: "Copied to clipboard",
-                    description: activeTab === "generate" ? "Code copied to clipboard" : "Algorithm suggestions copied to clipboard",
-                  });
+                  toast.success(activeTab === "generate" ? "Code copied to clipboard" : "Algorithm suggestions copied to clipboard");
                 }}
               >
                 Copy to Clipboard

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { FileUpload } from '@/components/FileUpload';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import {
   ResponsiveContainer,
   LineChart,
@@ -61,7 +62,6 @@ const DataAnalysis = () => {
     }
   };
 
-  // Generate distribution chart data
   const getDistributionData = () => {
     if (!fileStats?.statistics?.classDistribution) return [];
     
@@ -71,7 +71,6 @@ const DataAnalysis = () => {
     }));
   };
   
-  // Generate null counts chart data 
   const getNullCountsData = () => {
     if (!fileStats?.statistics?.nullCount) return [];
     
@@ -83,7 +82,6 @@ const DataAnalysis = () => {
       }));
   };
   
-  // Format correlation matrix for heatmap
   const getCorrelationData = () => {
     if (!fileStats?.statistics?.correlationMatrix) return [];
     
@@ -99,7 +97,6 @@ const DataAnalysis = () => {
     );
   };
   
-  // Generate colors for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FF6B6B', '#6B88FF'];
 
   return (
