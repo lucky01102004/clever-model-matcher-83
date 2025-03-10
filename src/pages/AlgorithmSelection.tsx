@@ -1,12 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Database, CheckCircle, FileWarning, Info } from 'lucide-react';
+import { ArrowLeft, Database, CheckCircle, FileWarning } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 
 // Define algorithm types
@@ -251,7 +249,6 @@ const AlgorithmSelection = () => {
   const [datasetType, setDatasetType] = useState<AlgorithmType | null>(null);
   const [recommendedAlgorithms, setRecommendedAlgorithms] = useState<Algorithm[]>([]);
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<Algorithm | null>(null);
-  const [classLabels, setClassLabels] = useState<string[]>([]);
   
   useEffect(() => {
     // Retrieve data from localStorage when component mounts
@@ -265,9 +262,6 @@ const AlgorithmSelection = () => {
           
           // Try to determine dataset type
           guessDatasetType(parsedData);
-          
-          // Identify potential class labels in the target column
-          identifyClassLabels(parsedData);
         } else {
           setSelectedTarget(null);
           setDatasetType(null);
@@ -278,21 +272,6 @@ const AlgorithmSelection = () => {
       }
     }
   }, []);
-  
-  const identifyClassLabels = (stats: any) => {
-    if (!stats.suggestedTarget) return;
-    
-    // Get values from suggested target column
-    const targetValues = stats.dataSample.map((row: any) => String(row[stats.suggestedTarget || ""]));
-    const uniqueValues = [...new Set(targetValues)];
-    
-    // If we have a reasonable number of unique values (not too many), treat them as class labels
-    if (uniqueValues.length > 1 && uniqueValues.length <= 15) {
-      setClassLabels(uniqueValues);
-    } else {
-      setClassLabels([]);
-    }
-  };
   
   const guessDatasetType = (stats: any) => {
     if (!stats.suggestedTarget) return;
@@ -362,8 +341,7 @@ const AlgorithmSelection = () => {
       algorithmName: selectedAlgorithm.name,
       algorithmType: selectedAlgorithm.type,
       dataDescription: fileStats,
-      targetColumn: selectedTarget,
-      classLabels: classLabels.length > 0 ? classLabels : null
+      targetColumn: selectedTarget
     };
     
     localStorage.setItem('codeGenerationData', JSON.stringify(codeGenerationData));
@@ -423,7 +401,6 @@ const AlgorithmSelection = () => {
                       // Re-analyze target column
                       const newStats = {...fileStats, suggestedTarget: value};
                       guessDatasetType(newStats);
-                      identifyClassLabels(newStats);
                     }}
                   >
                     <SelectTrigger>
@@ -442,27 +419,6 @@ const AlgorithmSelection = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                
-                {/* Class Labels Alert */}
-                {classLabels.length > 0 && (
-                  <Alert className="mb-6">
-                    <Info className="h-4 w-4" />
-                    <AlertTitle>Class Labels Identified</AlertTitle>
-                    <AlertDescription>
-                      <p className="mb-2">
-                        We've identified {classLabels.length} class labels in the target column. 
-                        These will be automatically one-hot encoded during processing.
-                      </p>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {classLabels.map((label, index) => (
-                          <Badge key={index} variant="outline">
-                            {label}
-                          </Badge>
-                        ))}
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                )}
                 
                 {selectedTarget && (
                   <div className="mb-6">
@@ -596,17 +552,6 @@ const AlgorithmSelection = () => {
                     </Select>
                   </div>
                 </CardContent>
-                
-                <CardFooter className="flex flex-col pb-3 pt-6">
-                  <div className="w-full mb-4 bg-blue-50 p-4 rounded-lg text-sm text-blue-800">
-                    <p className="font-medium mb-1">Preprocessing note:</p>
-                    <p>
-                      {classLabels.length > 0 ? 
-                        `Your dataset contains ${classLabels.length} string class labels that will be automatically converted to one-hot encoded vectors during preprocessing.` :
-                        "Any string or categorical data in your dataset will be automatically converted to a numeric format compatible with machine learning algorithms."}
-                    </p>
-                  </div>
-                </CardFooter>
               </Card>
             )}
           
@@ -644,4 +589,3 @@ const AlgorithmSelection = () => {
 };
 
 export default AlgorithmSelection;
-
